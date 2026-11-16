@@ -76,7 +76,7 @@ export function bestiary(suit: Suit, v: number, risen = false): Lore {
   return { name: 'Cauldron', caption: 'Do not ask what is in it. Drink.' };
 }
 
-export const FAMILY = { S: { name: 'Undead', trait: 'Rise: face cards come back once at half value.' }, C: { name: 'Beasts', trait: 'Pack: +1 strength per other ♣ in the room.' } };
+export const FAMILY = { S: { name: 'Undead', trait: 'Rise: face cards come back once at half value.' }, C: { name: 'Beasts', trait: 'Pack: +1 strength per other face-up ♣ in the room.' } };
 export const SIGIL_DESC: Record<Suit, string> = {
   S: 'Undead give +3 Valor per level.',
   C: 'Beasts give +3 Valor per level.',

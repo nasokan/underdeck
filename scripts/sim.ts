@@ -1,8 +1,8 @@
 // Balance check: a simple greedy bot plays many seeded runs. It plays badly, so treat results as a floor.
-// Usage: npm run sim -- [runs]
+// Usage: npm run sim -- [runs] [--starter]
 import { DEPTHS, FLOORS } from '../src/data';
 import {
-  Game, buyGood, buyRelic, canWeapon, fleeState, flee, healAmount, isMon, killScore, leaveFloor, leaveShop, newGame, openShop, resolve,
+  Game, buyGood, buyRelic, canWeapon, chooseStarter, fleeState, flee, healAmount, isMon, killScore, leaveFloor, leaveShop, newGame, openShop, resolve, starterChoices,
 } from '../src/game';
 
 function step(G: Game) {
@@ -27,7 +27,8 @@ function step(G: Game) {
 }
 
 function play(seed: string) {
-  const G = newGame(seed);
+  const G = newGame(seed, false, withStarter);
+  if (withStarter) chooseStarter(G, starterChoices(seed)[0]);
   for (let i = 0; i < 50000; i++) {
     if (G.screen === 'play') step(G);
     else if (G.screen === 'cleared') openShop(G);
@@ -40,10 +41,13 @@ function play(seed: string) {
   return G;
 }
 
-const runs = Number(process.argv[2] ?? 3000);
+const args = process.argv.slice(2);
+const withStarter = args.includes('--starter');
+const runs = Number(args.find(a => !a.startsWith('--')) ?? 3000);
+if (!Number.isInteger(runs) || runs < 1) throw new Error('Run count must be a positive integer.');
 const res = Array.from({ length: runs }, (_, i) => play(`SIM${i}`));
 const reach = (d: number, fi: number) => res.filter(G => G.screen === 'victory' || G.depth > d || (G.depth === d && G.fi > fi)).length / runs;
-console.log(`${runs} bot runs`);
+console.log(`${runs} bot runs${withStarter ? ' (first offered starter)' : ' (no starter)'}`);
 for (let d = 1; d <= DEPTHS; d++) console.log(`  cleared Depth ${d} ${FLOORS[2]}: ${(reach(d, 2) * 100).toFixed(1)}%`);
 console.log(`  cleared Depth 1 Hall: ${(reach(1, 0) * 100).toFixed(1)}%`);
 const dry = res.filter(G => G.cause.includes('ran out')).length;

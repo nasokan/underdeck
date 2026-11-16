@@ -19,7 +19,7 @@ export type GoodKey = 'tonic' | 'sigil' | 'purge' | 'gild' | 'hone' | 'armory' |
 export interface Good { k: GoodKey; name: string; desc: string; cost: number; suit?: Suit; sold: boolean }
 export interface Shop { relics: { k: RelicKey; sold: boolean }[]; goods: Good[]; reroll: number; rng: Rng }
 export interface Summary { lines: [string, number][]; total: number; glory: number; target: number }
-export type Screen = 'play' | 'cleared' | 'shop' | 'dead' | 'victory';
+export type Screen = 'starter' | 'play' | 'cleared' | 'shop' | 'dead' | 'victory';
 export interface Game {
   version: 1; seed: string; daily: boolean; screen: Screen;
   depth: number; fi: number; gold: number; hp: number; maxHp: number;
@@ -46,6 +46,10 @@ export const isMon = (c: Card) => c.suit === 'S' || c.suit === 'C';
 export const has = (G: Game, k: RelicKey) => G.relics.includes(k);
 const BOSS_KEYS = Object.keys(BOSSES) as BossKey[];
 const RELIC_KEYS = Object.keys(RELICS) as RelicKey[];
+const STARTERS: RelicKey[] = ['whetstone', 'irongut', 'cloak', 'exec', 'scavenger'];
+
+/** Starter offers have their own stream, so they cannot change the dungeon or bosses. */
+export const starterChoices = (seed: string): RelicKey[] => pickN(mkRng(seed, 'starter'), STARTERS, 3);
 
 function log(G: Game, t: string) { G.log.unshift(t); G.log.length = Math.min(G.log.length, 40); }
 const cardName = (c: Card) => `${rankName(c.v)}${SYM[c.suit]}`;
@@ -57,7 +61,7 @@ function baseDeck(G: Game): Card[] {
   return d;
 }
 
-export function newGame(seed: string, daily = false): Game {
+export function newGame(seed: string, daily = false, chooseStarter = false): Game {
   const br = mkRng(seed, 'bosses');
   const bosses: BossKey[] = [];
   while (bosses.length < DEPTHS) bosses.push(...shuffle(br, [...BOSS_KEYS]));
@@ -68,7 +72,19 @@ export function newGame(seed: string, daily = false): Game {
   } as Game;
   G.deck = baseDeck(G);
   startFloor(G);
+  if (chooseStarter) G.screen = 'starter';
   return G;
+}
+
+/** Take one free starter, then replay the unchanged first-floor shuffle with its effects applied. */
+export function chooseStarter(G: Game, k: RelicKey): boolean {
+  if (G.screen !== 'starter' || !starterChoices(G.seed).includes(k)) return false;
+  G.relics.push(k);
+  applyRelic(G, k, 1);
+  G.log = [];
+  startFloor(G);
+  log(G, `Took ${RELICS[k].name} as your starting relic.`);
+  return true;
 }
 
 export function startFloor(G: Game) {
@@ -240,9 +256,12 @@ export function resolve(G: Game, id: number, mode?: Mode): Ev[] {
 
   checkTarget(G, ev);
   const more = f.draw.length + f.risenQueue.length;
-  if (f.room.length <= carry(G) && more > 0) {
+  const completed = more > 0 ? f.room.length <= carry(G) : f.room.length === 0;
+  if (completed) {
     if (has(G, 'hoarder') && G.gold) { f.glory += G.gold; G.totalGlory += G.gold; log(G, `Hoarder: +${G.gold} Glory.`); checkTarget(G, ev); }
     if (f.cleared) f.bonusRooms++;
+  }
+  if (completed && more > 0) {
     f.fledLast = false;
     dealRoom(G);
   } else if (!f.room.length && !more) {

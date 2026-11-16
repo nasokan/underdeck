@@ -100,6 +100,42 @@ describe('floor flow', () => {
     leaveFloor(G);
     expect(G.summary!.lines.find(l => l[0].startsWith('Rooms past'))![1]).toBe(1);
   });
+  it('Hoarder can reach the target on the final room before the dungeon runs dry', () => {
+    const G = fresh();
+    G.relics = ['hoarder']; G.gold = 5;
+    G.f.glory = 30; G.totalGlory = 30; G.f.target = 35;
+    G.f.draw = []; G.f.risenQueue = [];
+    const [last] = setRoom(G, [{ suit: 'H', v: 2 }]);
+    const ev = resolve(G, last.id);
+    expect(G.screen).toBe('cleared');
+    expect(G.totalGlory).toBe(35);
+    expect(G.summary!.glory).toBe(35);
+    expect(ev.map(e => e.t)).toEqual(expect.arrayContaining(['target', 'leave']));
+    expect(ev.some(e => e.t === 'dead')).toBe(false);
+  });
+  it('the final room after the target earns exactly one bonus gold', () => {
+    const G = fresh();
+    G.f.glory = G.f.target; G.f.cleared = true;
+    G.f.draw = []; G.f.risenQueue = [];
+    const [last] = setRoom(G, [{ suit: 'H', v: 2 }]);
+    resolve(G, last.id);
+    expect(G.screen).toBe('cleared');
+    expect(G.f.bonusRooms).toBe(1);
+    expect(G.summary!.lines.find(l => l[0] === 'Rooms past the target')).toEqual(['Rooms past the target', 1]);
+    const gold = G.gold;
+    leaveFloor(G);
+    expect(G.gold).toBe(gold);
+  });
+  it('does not pay Hoarder until every card in the final room is resolved', () => {
+    const G = fresh();
+    G.relics = ['hoarder']; G.gold = 5;
+    G.f.glory = 30; G.f.target = 35; G.f.draw = []; G.f.risenQueue = [];
+    const [first] = setRoom(G, [{ suit: 'H', v: 2 }, { suit: 'H', v: 3 }]);
+    resolve(G, first.id);
+    expect(G.screen).toBe('play');
+    expect(G.f.glory).toBe(30);
+    expect(G.f.bonusRooms).toBe(0);
+  });
   it('cannot flee twice in a row', () => {
     const G = fresh();
     G.f.fleesLeft = 3;

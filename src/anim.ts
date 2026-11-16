@@ -5,14 +5,17 @@ export const reduced = () =>
 
 export function anim(el: Element | null | undefined, frames: Keyframe[], opts: KeyframeAnimationOptions): Promise<void> {
   if (!el || reduced() || !(el as HTMLElement).animate || document.hidden) return Promise.resolve();
-  const a = (el as HTMLElement).animate(frames, { fill: 'none', ...opts });
+  let a: Animation;
+  try { a = (el as HTMLElement).animate(frames, { fill: 'none', ...opts }); }
+  catch { return Promise.resolve(); } // A failed effect must never block a saved move.
   const total = Number(opts.duration ?? 0) + Number(opts.delay ?? 0) + 150;
-  // Never let gameplay wait on an animation that can't finish (background tab, element removed mid-flight).
-  const timeout = new Promise<void>(r => setTimeout(r, total));
-  return Promise.race([a.finished.then(() => undefined, () => undefined), timeout]);
+  return new Promise<void>(done => {
+    const timeout = setTimeout(() => { a.cancel(); done(); }, total);
+    a.finished.then(() => { clearTimeout(timeout); done(); }, () => { clearTimeout(timeout); done(); });
+  });
 }
 
-export const wait = (ms: number) => new Promise<void>(r => setTimeout(r, reduced() ? 0 : ms));
+export const wait = (ms: number) => new Promise<void>(r => setTimeout(r, reduced() || document.hidden ? 0 : ms));
 
 function layer() {
   let l = document.getElementById('fx-layer');
@@ -27,19 +30,15 @@ export function popup(text: string, kind: 'glory' | 'hurt' | 'heal' | 'gold' | '
   d.textContent = text;
   d.style.left = `${x}px`;
   d.style.top = `${y}px`;
+  d.style.transform = 'translate(-50%, 0)';
   layer().appendChild(d);
   const dur = reduced() ? 900 : 1300;
-  d.animate(
-    reduced()
-      ? [{ opacity: 1 }, { opacity: 0 }]
-      : [
-          { opacity: 0, transform: 'translate(-50%, 0) scale(.6)' },
-          { opacity: 1, transform: 'translate(-50%, -18px) scale(1.15)', offset: 0.18 },
-          { opacity: 1, transform: 'translate(-50%, -40px) scale(1)', offset: 0.6 },
-          { opacity: 0, transform: 'translate(-50%, -70px) scale(.95)' },
-        ],
-    { duration: dur, delay, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'both' },
-  );
+  if (!reduced()) void anim(d, [
+    { opacity: 0, transform: 'translate(-50%, 0) scale(.6)' },
+    { opacity: 1, transform: 'translate(-50%, -18px) scale(1.15)', offset: 0.18 },
+    { opacity: 1, transform: 'translate(-50%, -40px) scale(1)', offset: 0.6 },
+    { opacity: 0, transform: 'translate(-50%, -70px) scale(.95)' },
+  ], { duration: dur, delay, easing: 'cubic-bezier(.2,.7,.3,1)', fill: 'both' });
   setTimeout(() => d.remove(), dur + delay + 50);
 }
 
@@ -62,6 +61,7 @@ export function slash(target: Element, kind: 'blade' | 'fist') {
 
 /** Fly a visual copy of `from` to `to`, then remove it. */
 export function fly(from: Element, to: Element, duration = 420) {
+  if (reduced() || document.hidden) return Promise.resolve();
   const a = from.getBoundingClientRect(), b = to.getBoundingClientRect();
   const ghost = from.cloneNode(true) as HTMLElement;
   ghost.classList.add('ghost');
@@ -90,9 +90,10 @@ export function pulse(el: Element | null, scale = 1.35) {
 /** Count a number up inside an element. */
 export function countUp(el: Element | null, from: number, to: number, ms = 650) {
   if (!el) return;
-  if (reduced() || from === to) { el.textContent = String(to); return; }
+  if (reduced() || document.hidden || from === to) { el.textContent = String(to); return; }
   const t0 = performance.now();
   const tick = (t: number) => {
+    if (!el.isConnected) return;
     const k = Math.min(1, (t - t0) / ms), e = 1 - Math.pow(1 - k, 3);
     el.textContent = String(Math.round(from + (to - from) * e));
     if (k < 1) requestAnimationFrame(tick);

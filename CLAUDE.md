@@ -11,7 +11,7 @@ For a review task, see [docs/REVIEW.md](docs/REVIEW.md).
 ```bash
 npm install
 npm run dev     # http://localhost:5173
-npm test        # vitest rules tests (tests/game.test.ts)
+npm test        # vitest rules, UI dispatch, modal policy and save tests
 npm run sim     # greedy bot plays 3000 seeded runs; prints clear rates per Depth
 npm run build   # tsc --noEmit + vite build into dist/
 ```
@@ -23,6 +23,7 @@ Pushing to `main` runs tests, builds and deploys to GitHub Pages (`.github/workf
 | `src/game.ts` | All rules. Pure: no DOM. Functions mutate a `Game` and return `Ev[]` events for the UI to animate. |
 | `src/data.ts` | Relics, bosses, bestiary names/captions, balance knobs (`BASE_TARGETS`, `GROWTH`). |
 | `src/rng.ts` | Seeded RNG (mulberry32). Separate named streams: `bosses`, `floor/depth/fi`, `shop/depth/fi`. |
+| `src/ui-policy.ts` | Pure screen/modal action guards and native keyboard policy. |
 | `src/save.ts` | localStorage autosave (`underdeck-save-v1`) and stats (`underdeck-stats-v1`). |
 | `src/ui.ts` | Rendering (HTML strings into `#app`), input, action animations. Module-level state: `G`, `sel`, `picker`, `modal`, `busy`. |
 | `src/anim.ts` | Web Animations helpers. Every animation times out, so gameplay never waits on a stalled animation. |
@@ -44,3 +45,10 @@ Pushing to `main` runs tests, builds and deploys to GitHub Pages (`.github/workf
 - In dev, `window.__ud.G` is the live game state and `window.__ud.render()` re-renders. Use them to stage rooms, e.g.
   `__ud.G.f.room = [{c:{id:1,suit:'C',v:10},hidden:false}, …]; __ud.render()`.
 - `#seed-XXXXXX` in the URL offers that seed on the title screen.
+
+## November 2026 upgrade
+- New UI runs call `newGame(seed, daily, true)` and enter `starter`; existing callers default to immediate play. `starterChoices` uses an isolated stream, and `chooseStarter` applies exactly one free relic.
+- Preserve 8 depths/24 floors, one difficulty, original targets and base HP. No tutorial, sound or visual redesign.
+- Keep modal actions guarded by `ui-policy.ts`, background content inert, and focus inside dialogs. Persist rules mutations before visual waits; release busy locks in finally.
+- Mobile bar clearance comes from ResizeObserver; do not restore a fixed padding guess.
+- Findings, design decisions and research: [docs/UPGRADE.md](docs/UPGRADE.md).

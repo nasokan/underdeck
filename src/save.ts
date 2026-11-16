@@ -2,6 +2,13 @@ import type { Game } from './game';
 
 const SAVE = 'underdeck-save-v1';
 const STATS = 'underdeck-stats-v1';
+const MOTION = 'underdeck-motion-v1';
+export type MotionSetting = 'auto' | 'reduced';
+
+export function loadMotion(): MotionSetting {
+  return read<unknown>(MOTION) === 'reduced' ? 'reduced' : 'auto';
+}
+export const saveMotion = (mode: MotionSetting) => write(MOTION, mode);
 
 export interface Stats { runs: number; wins: number; best: { depth: number; fi: number; glory: number; seed: string } | null }
 
