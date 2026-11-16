@@ -77,9 +77,9 @@ export function artDefs(): string {
 // ---------------------------------------------------------------- undead (spades)
 
 function skeleton(): string {
-  const arch = P('ink', 'M16 95 V44 A34 34 0 0 1 84 44 V95 Z') +
-    cut('M20.5 93 V44.5 A29.5 29.5 0 0 1 79.5 44.5 V93', 1.1) +
-    cut('M24 30 L27 32 M76 30 L73 32 M50 13 V16', 1.2);
+  const arch = P('ink', 'M19 95 V47 A31 31 0 0 1 81 47 V95 Z') +
+    cut('M23.5 93 V47.5 A26.5 26.5 0 0 1 76.5 47.5 V93', 1.1) +
+    cut('M28 33 L31 35 M72 33 L69 35 M50 20 V23', 1.2);
   const skull =
     P('pi', 'M40 26 C40 14.5 60 14.5 60 26 C60 31 58.2 33 57 35 L57 40 L43 40 L43 35 C41.8 33 40 31 40 26Z', ' stroke-width="1.4"') +
     E('ink', 45.2, 27.2, 3.3, 3.7) + E('ink', 54.8, 27.2, 3.3, 3.7) +
@@ -100,8 +100,8 @@ function skeleton(): string {
   const armL = bone('M37 44.5 L33 56 L30.5 67', 2.8) +
     ln('M30.5 67 L28.5 71.5 M30.5 67 L30.6 72 M30.5 67 L32.5 71', 1.1);
   const sword =
-    P('pi', 'M74.5 43 L72.6 41.8 L82.6 9.5 L85.4 7.6 L84.8 11 Z', ' stroke-width="1.5"') +
-    ln('M79.5 22 L81 23 M77.5 28.5 L78.6 29.3', 1.1) +
+    P('pi', 'M74.5 43 L72.6 41.8 L80.4 17 L83 15.2 L82.6 18.4 Z', ' stroke-width="1.5"') +
+    ln('M78.6 26 L80 27 M77 31.5 L78.2 32.3', 1.1) +
     ln('M68.6 40 L80.4 44.4', 3) +
     ln('M74 43 L71.6 51', 3.2) + C('ink', 71.4, 52, 2.2);
   const armR = g('a-limb',
@@ -112,27 +112,31 @@ function skeleton(): string {
 }
 
 function ghoul(): string {
-  const torso = P('ink', 'M38 46 C40 31 56 23 70 31 C83 39 87 56 79 68 C71 75 56 71 48 63 C44 59 40 53 38 46Z');
-  const head =
-    P('ink', 'M20 40 C20 30.5 29 26.5 36.5 28.6 C44 31 46.5 38 44 44.5 C42 50 36 52.5 31.5 52.5 L25 50.5 C21.6 48.6 20 44.5 20 40Z') +
-    P('ink', 'M37 31 L51 22.5 L43 37.5Z') + cut('M41 31.2 L47.5 26.4', 1.2) +
-    cut('M21.4 44.2 L23.6 47 L25.8 44.6 L28 47.6 L30.2 45.2 L32.4 48 L34.4 45.6', 1.35) +
-    cut('M25.5 33.4 L34.6 35.6', 1.5) + cut('M30 29.6 C34 28.4 38 29.4 40.5 32', 1.1);
-  const eyes = g('a-eyes', E('acc', 31, 38.4, 2.8, 1.9, ' transform="rotate(10 31 38.4)"'));
+  // emaciated corpse-eater creeping on bent legs, gnawing a bone; faces left
+  const farLeg = ln('M64 62 L72 77 L73 90 L65 92', 5.6) + ln('M65 92 L61.4 91 M65 92 L61.6 94', 1.4);
+  const torso = P('ink', 'M43 44 C46 34 57 30.6 64 35.6 C71 41 72 52 68.4 63.6 C64 67 58.4 67 55 65 C53.4 57 49.4 50 43 44Z');
+  const rag = P('ink', 'M54 61 L70 60 L72.6 71 L68.4 68 L66.6 74 L63 69 L59.6 74.6 L57.6 68.6 L53.6 72 Z') + cut('M60 63 L59.6 70 M65.6 62.6 L66 69', 1);
+  const leg = ln('M60 66 L50.6 77.4 L58.6 90.4', 6.6) + ln('M58.6 90.6 L46.6 92.4', 4.2) +
+    ln('M46.6 92.4 L43 90.8 M46.6 92.4 L43 94.4', 1.5) + cut('M53.4 72 L50.4 76.4', 1.2) + C('ink', 50.8, 77.4, 3.8);
   const carve =
-    cut('M44 36 C52 27.6 64 27.6 74.5 36', 2.6, ' stroke-dasharray="0.1 4.2"') +
-    cut('M57 43 C61.5 49 61.5 56 57.5 62 M63.5 41.5 C68.5 48 68.5 56 64.5 62.5 M70 43.5 C74 50 74 56.5 70.6 61.5', 1.6) +
-    cut('M76 52 C79.5 57 79 63 75.5 67', 1.3);
-  const hind = ln('M72.5 63 L62 82 L72 92', 8.5) + ln('M69.5 92.3 L85 93.4', 4.6) +
-    cut('M70 70 L65 80', 1.2) + P('hatch', 'M60 74 C64 70 72 70 76 74 L72 88 L62 86Z');
-  const front = ln('M46 52 L42 72 L36.5 90', 5.6) +
-    ln('M36.5 90 L30 93.4 M36.5 90 L34 95 M36.5 90 L39.6 94.4', 1.7);
-  const reach = g('a-limb',
-    ln('M44 50 C36 60 26 64 15.5 60', 5.2) +
-    ln('M15.5 60 L7.6 53.6 M15.5 60 L5.6 59.4 M15.5 60 L8.4 65.6', 1.9) + cut('M38 58 C33 61 27 62.5 22 62', 1.1),
+    cut('M50 37.6 C57 32.8 66 35 70 44 C72 50 71.4 56 70 61', 2.4, ' stroke-dasharray="0.1 4"') +
+    cut('M51.4 44 C55.6 43.4 60 45 63.6 48 M53.4 49.4 C57.4 49 61.4 50.6 64.6 53.6 M55.4 55 C58.6 54.6 62 56 64.6 58.6', 1.5);
+  const dangle = ln('M55 41 L48 60 L38 75', 4.6) +
+    ln('M38 75 L32.6 81.4 M38 75 L35.6 83 M38 75 L39.6 82.6', 1.7);
+  const head =
+    P('ink', 'M30 30 C30 22 38 18.6 45 20 C52 21.6 54.6 29 52.6 35.6 C51.6 39.6 48.6 42 46.4 44 L44.4 50 C42.6 52.6 38.4 52.6 36.4 50.4 L32 46.4 C29.4 44.6 27.4 42.6 26.4 40.4 L28.4 38.4 C27.4 35.4 28 32.4 30 30Z') +
+    P('ink', 'M47.6 27.6 L59 21.4 L52.4 33.4Z') + cut('M50.4 27.4 L56 24.4', 1.1) +
+    cut('M28.6 29.6 L37.6 31.2', 1.6) + cut('M37 38.4 C38.8 40.4 41 40.6 43 39.6', 1.2) +
+    cut('M33.6 23.4 C37 21.4 41 21 44.4 22', 1.2) +
+    cut('M27.6 41.4 L29.4 43.6 L31.2 41.8 L33 44 L34.8 42.2 L36.4 44.4', 1.3);
+  const eyes = g('a-eyes', E('acc', 33.4, 33.6, 2.5, 1.7, ' transform="rotate(12 33.4 33.6)"'));
+  const gnaw = g('a-limb',
+    ln('M52 44 L51 60 L37 51', 4.6) +
+    bone('M17.6 49.4 L39.6 45.6', 2.6) + C('pi', 16.4, 48, 2.4, ' stroke-width="1.1"') + C('pi', 16.8, 51.4, 2.4, ' stroke-width="1.1"') +
+    C('ink', 35.6, 50, 3.4) + ln('M34 47 L31.6 45.2 M35.6 46.6 L34.4 44 M37.4 47 L37.4 44.2', 1.3) + cut('M50 50 L50.6 57', 1),
     ' style="transform-origin:100% 0%"');
   return svg('art-mon art-ghoul',
-    shadow(52, 36) + g('a-body', hind + torso + front + reach + head + carve + eyes));
+    shadow(56, 28) + g('a-body', farLeg + dangle + torso + rag + leg + carve + head + gnaw + eyes));
 }
 
 function wraith(): string {
@@ -172,7 +176,7 @@ function revenant(): string {
     P('paper', 'M58 52 C63 50 67 54 66 60 C64 63 59 62 57 58Z') +
     ln('M58 55 L65.5 54.2 M58 58.4 L65 58.4', 1.1) +
     // arrow stuck in the shoulder
-    ln('M64 42 L80 25', 1.4) + P('ink', 'M80 25 L84.5 19.5 L82 25.8Z M80 25 L85.6 22.6 L81.4 26.6Z');
+    ln('M64 42 L77 28', 1.4) + P('ink', 'M77 28 L81.5 22.5 L79 28.8Z M77 28 L82.6 25.6 L78.4 29.6Z');
   const helm =
     P('ink', 'M37.5 14 C37.5 5 62.5 5 62.5 14 L63.5 33 C63.5 37.5 36.5 37.5 36.5 33 Z') +
     cut('M41 22 L59 22', 2.6) + cut('M50 7.5 V18.5 M50 25.5 V35', 1.3) +
@@ -193,8 +197,8 @@ function revenant(): string {
 
 function banshee(): string {
   const hair = P('ink',
-    'M31 55 C21 46 15.5 31 21 14 L27 25 C28 14 34 6 43 2 L42 13 C48 6 56 3 63 2.5 L60 13 C67 8 75 9 82 5 L76 20 C84 22.5 87 34 82 47 L76 40 C74 47 72 51 69 55 L62 45 L38 45 Z');
-  const strands = cut('M27 40 C24 32 24 24 27 18 M33 32 C32 22 36 14 41 9 M66 30 C68 22 70 16 76 12 M73 38 C76 32 78 28 79 22', 1.3);
+    'M31 55 C21 46 17 34 21 23 L27.4 29 C28 18 33 11 41 6 L41.6 15 C46 9.6 54 7 61 6 L59 14.4 C64 11.6 68 11.4 71.6 14.6 L71 22 C80 25 84.6 35 80.6 47 L76 40 C74 47 72 51 69 55 L62 45 L38 45 Z');
+  const strands = cut('M26.4 42 C24.4 36 24.4 31 26.6 27 M33 32 C33 24 36 18 40 12.4 M66 30 C67 24 68 20 70 17 M73.4 38 C75.4 33 77 30 78 27', 1.3);
   const face =
     P('pi', 'M40.5 29 C40.5 18.5 59.5 18.5 59.5 29 L57.5 46 C55.6 55 44.4 55 42.5 46 Z', ' stroke-width="1.5"') +
     P('hatch', 'M41 30 C41.2 37 42 43 43.4 47 C44.6 50 46 52 48 53 C45 47 44 40 44 32Z') +
@@ -218,11 +222,11 @@ function banshee(): string {
 }
 
 function lich(): string {
-  const staff =
-    ln('M77 18 V95', 3.6) + cut('M76.4 30 V90', 0.8) +
+  const staff = g('',
+    ln('M77 18 V91', 3.6) + cut('M76.4 30 V90', 0.8) +
     P('ink', 'M77 22 C70 20 69 12 72 6 L73.6 12 C74 16 76 18 77 18 C78 18 80 16 80.4 12 L82 6 C85 12 84 20 77 22Z') +
-    C('acc', 77, 11.5, 4.2) + cut('M75 9.2 A2.8 2.8 0 0 1 77.6 8.4', 1);
-  const collar = P('ink', 'M28 48 L22 22 L32 32 L33 18 L39 28 L61 28 L67 18 L68 32 L78 22 L72 48Z');
+    C('acc', 77, 11.5, 4.2) + cut('M75 9.2 A2.8 2.8 0 0 1 77.6 8.4', 1), ' transform="translate(0 4)"');
+  const collar = P('ink', 'M28 48 L23 24 L32 32 L33 18 L39 28 L61 28 L67 18 L68 32 L78 22 L72 48Z');
   const robe =
     P('ink', 'M30 42 C24 56 19 74 10 95 L88 95 C80 74 75 56 70 42 C62 38 38 38 30 42 Z') +
     cut('M42 50 C40 64 36 80 31 93 M50 50 V93 M58 50 C60 64 64 80 69 93', 1.5) +
@@ -239,7 +243,7 @@ function lich(): string {
   const cast = g('a-limb',
     ln('M34 46 C28 46 22 42 18.5 36', 8) +
     bone('M17.5 35 L13 26.6 M17.5 35 L16.6 25.4 M17.5 35 L20.4 26.6 M17.5 35 L11 31', 1.2) +
-    ln('M14 20 L12 16 M19 19 L19.5 14.6 M23.6 21 L26.4 17.6 M9.6 24 L6 22', 1.1),
+    ln('M9 25.4 L5.4 24 M8.4 30.6 L4.4 31 M10.4 35.6 L7 38', 1.1),
     ' style="transform-origin:100% 100%"');
   return svg('art-mon art-lich',
     shadow(50, 42, 95, 2.6) + staff + g('a-body', collar + robe + grip + cast + skull + crown + eyes));
@@ -247,12 +251,12 @@ function lich(): string {
 
 function boneKing(): string {
   const throne =
-    P('ink', 'M12 95 L12 40 L6 33 L15 30 L16 13 L25 22 L31 5 L40 16 L50 1 L60 16 L69 5 L75 22 L84 13 L85 30 L94 33 L88 40 L88 95 Z') +
-    cut('M17 92 V40 M83 92 V40', 1.2) +
-    C('pi', 16, 13, 2.7, ' stroke-width="1"') + C('pi', 84, 13, 2.7, ' stroke-width="1"') +
-    C('pi', 31, 5, 2.5, ' stroke-width="1"') + C('pi', 69, 5, 2.5, ' stroke-width="1"') +
-    C('ink', 15.2, 13, 0.7) + C('ink', 16.8, 13, 0.7) + C('ink', 83.2, 13, 0.7) + C('ink', 84.8, 13, 0.7) +
-    cut('M21 24 L26 28 M79 24 L74 28 M36 16 L39 20 M64 16 L61 20', 1.3);
+    P('ink', 'M12 95 L12 42 L6 36 L15 33 L18 26 L26 28 L31 13 L40 18 L50 3 L60 18 L69 13 L74 28 L82 26 L85 33 L94 36 L88 42 L88 95 Z') +
+    cut('M17 92 V42 M83 92 V42', 1.2) +
+    C('pi', 18, 26, 2.7, ' stroke-width="1"') + C('pi', 82, 26, 2.7, ' stroke-width="1"') +
+    C('pi', 31, 13, 2.5, ' stroke-width="1"') + C('pi', 69, 13, 2.5, ' stroke-width="1"') +
+    C('ink', 17.2, 26, 0.7) + C('ink', 18.8, 26, 0.7) + C('ink', 81.2, 26, 0.7) + C('ink', 82.8, 26, 0.7) +
+    cut('M22 31 L26 33 M78 31 L74 33 M35 21 L38 24 M65 21 L62 24', 1.3);
   const rests = bone('M10 62 L30 62 M70 62 L90 62', 3.4) +
     C('pi', 9, 62, 3.6, ' stroke-width="1.2"') + C('pi', 91, 62, 3.6, ' stroke-width="1.2"') +
     C('ink', 7.8, 61.6, 0.9) + C('ink', 10.2, 61.6, 0.9) + C('ink', 89.8, 61.6, 0.9) + C('ink', 92.2, 61.6, 0.9);
@@ -328,16 +332,16 @@ function direWolf(): string {
 }
 
 function caveBear(): string {
-  const armL = ln('M30 52 C24 44 18 36 14 26', 13) +
-    ln('M6 21 C4 17 5 14 7 12 M10 18 C9 13 10.5 10.6 13 9 M15 18 C15.5 13.6 17.4 11.6 20 11', 1.9);
+  const armL = ln('M31 52 C24 55 18 60 13 66', 13) +
+    ln('M7 61 C4 62.6 2.6 65.4 3 68.4 M6.4 66.4 C4 68.6 3.6 71.6 4.6 74.4 M9 70.6 C7.4 73.4 7.6 76.4 9.2 78.8', 1.9);
   const body =
     P('ink', 'M22 95 C16 72 18.5 53 30 44 C37 39 63 39 70 44 C81.5 53 84 72 78 95 Z') +
     P('hatch', 'M30 60 C26 70 26 84 28 95 L36 95 C34 82 34 70 36 62Z') +
     cut('M40 54 L43 58 L46 54 M54 54 L57 58 L60 54 M46 62 L49 66 L52 62 M38 66 L41 70 L44 66 M56 66 L59 70 L62 66 M44 74 L47 78 L50 74 M54 76 L57 80 L60 76', 1.3) +
     ln('M36 95 L38 86 M64 95 L62 86', 2);
-  const armR = g('a-limb', ln('M70 52 C78 58 82 64 84 72', 13) +
-    ln('M85 80 C86 84 85 87 82.6 89 M89 77 C91 81 91 84 89.4 87 M91.6 72.4 C94 75 95 78 94 81', 1.9),
-    ' style="transform-origin:0% 0%"');
+  const armR = g('a-limb', ln('M69 50 C76 45 81 38 84 30', 13) +
+    ln('M78.4 24.6 C78 21 79.4 18.4 82 17 M83 23.4 C83.4 19.6 85.4 17.4 88.4 16.6 M87.6 25.6 C89 22.4 91.4 21 94.4 21', 1.9),
+    ' style="transform-origin:0% 100%"');
   const head =
     C('ink', 36, 22, 5.8) + C('ink', 64, 22, 5.8) + cut('M33.4 22.4 A3 3 0 0 1 38 19.8 M62 19.8 A3 3 0 0 1 66.6 22.4', 1.3) +
     E('ink', 50, 34, 16, 14) +
@@ -348,7 +352,7 @@ function caveBear(): string {
     P('paper', 'M43.4 41.6 L45 45.6 L46.6 41.6Z M53.4 41.6 L55 45.6 L56.6 41.6Z M45 50 L46.4 47.4 L47.4 50.6Z M52.6 50.6 L53.6 47.4 L55 50Z') +
     E('acc', 50, 47.8, 3, 2);
   const eyes = g('a-eyes', C('acc', 43.6, 31.6, 1.5) + C('acc', 56.4, 31.6, 1.5));
-  return svg('art-mon art-bear', g('a-body', armL + body + armR + head + eyes));
+  return svg('art-mon art-bear', shadow(50, 34, 95, 2.4) + g('a-body', armL + body + armR + head + eyes));
 }
 
 function basilisk(): string {
@@ -359,72 +363,80 @@ function basilisk(): string {
     ln('M4 54 L1 51 M4 54 L0.6 55.4', 1.4), ' style="transform-origin:100% 100%"');
   const legs = ln('M55 50 L52 60 M52 60 L48.4 62 M52 60 L50.6 64 M52 60 L54 64', 3) +
     ln('M64 79 L62 90 M62 90 L58 92 M62 90 L61.4 94 M62 90 L65.4 93', 3);
-  const head =
+  const head = g('', 
     P('ink', 'M9 30 C13 22 24 17.5 34 19.5 C41 21.5 43 30 38.5 37 L30 38.5 C22 38.5 14 36.5 9 30Z') +
     P('ink', 'M23 21 L20 9 L27 16 L29.4 4.6 L33.6 15.6 L39 9 L38.4 22.6Z') +
     cut('M25.4 16.6 L23.6 12.6 M31.4 13.4 L30.4 9.6', 1) +
     cut('M10.5 31 C16 33.5 23 34.4 31 34', 1.2) + cut('M30 36.6 L36 34.4', 1) +
-    `<path class="acc-s" stroke-width="1.3" d="M8.6 30.4 L3 32.6 L0.6 30.6 M3 32.6 L1 35.4"/>`;
-  const eyes = g('a-eyes', C('acc', 27.4, 26.2, 3.6) + P('ink', 'M27.4 23.2 C26.4 25 26.4 27.4 27.4 29.2 C28.4 27.4 28.4 25 27.4 23.2Z') +
-    ln('M21.4 22.6 L18.6 20.6 M21 26.2 L17.6 26.2 M22 29.8 L19.4 31.6', 0.9));
+    `<path class="acc-s" stroke-width="1.3" d="M8.6 30.4 L3 32.6 L0.6 30.6 M3 32.6 L1 35.4"/>`, ' transform="translate(8 8)"');
+  const eyes = g('a-eyes', g('', C('acc', 27.4, 26.2, 3.6) + P('ink', 'M27.4 23.2 C26.4 25 26.4 27.4 27.4 29.2 C28.4 27.4 28.4 25 27.4 23.2Z') +
+    ln('M21.4 22.6 L18.6 20.6 M21 26.2 L17.6 26.2 M22 29.8 L19.4 31.6', 0.9), ' transform="translate(8 8)"'));
   return svg('art-mon art-basilisk',
     shadow(52, 40, 94) + g('a-body', tail + body + belly + legs + head + eyes));
 }
 
 function manticore(): string {
-  const wingFar = P('hatch', 'M60 48 L66 14 L76 20 L84 12 Q83 26 88 28 Q86 38 92 42 Q84 46 80 50Z');
-  const wing = P('ink', 'M46 50 L39 10 L52 16 L60 7 Q59.5 21 66 22 Q65 31 74 33 Q70 41 70 50 Z') +
-    cut('M47 47 L51.6 17 M48 47 L59 9.6 M50 48 L64.6 23.6 M52 48.6 L71.6 34', 1.2);
+  const wing = P('ink', 'M46 50 L40 13 L52 19 L60 10 Q60 23 66.4 25 Q66 33 74 36 Q70 43 70 50 Z') +
+    cut('M47.6 46 L51.4 21 M49.6 46.4 L59 13.6 M52 47.4 L65 27', 1.4);
+  const segs: Array<[number, number, number]> = [[86.4, 54.6, 5.8], [92, 44.6, 5.6], [92.6, 33.6, 5.4], [88, 24, 5.2], [79.4, 19, 5]];
+  const joints = segs.slice(0, -1).map(([x, y], i) => {
+    const [x2, y2] = segs[i + 1];
+    const mx = (x + x2) / 2, my = (y + y2) / 2, dx = x2 - x, dy = y2 - y, l = Math.hypot(dx, dy), k = 4.6 / l;
+    return `M${r1(mx - dy * k)} ${r1(my + dx * k)} Q${r1(mx - dx * 0.12)} ${r1(my - dy * 0.12)} ${r1(mx + dy * k)} ${r1(my - dx * k)}`;
+  }).join(' ');
   const tail = g('a-limb',
-    ln('M82 58 C96 52 98.5 32 89 21 C83 15.4 75 17 73 23', 6.4) +
-    cut('M82 58 C96 52 98.5 32 89 21 C83 15.4 75 17 73 23', 6.8, ' stroke-dasharray="1 4.2" stroke-linecap="butt"') +
-    P('acc', 'M74.6 21.4 C70 19.4 66 22 66.2 29 C68 25.6 70.6 25.2 73.4 26.4Z'),
+    ln('M78 58 C84 60 88 58 87 54', 8) +
+    segs.map(([x, y, r]) => C('ink', x, y, r)).join('') + cut(joints, 1.6) +
+    segs.map(([x, y, r]) => cut(`M${r1(x - r * 0.5)} ${r1(y - r * 0.45)} A${r * 0.6} ${r * 0.6} 0 0 1 ${r1(x + r * 0.3)} ${r1(y - r * 0.6)}`, 1)).join('') +
+    E('acc', 71, 20.6, 5.4, 4.4, ' transform="rotate(-15 71 20.6)"') + E('line', 71, 20.6, 5.4, 4.4, ' stroke-width="1.4" transform="rotate(-15 71 20.6)"') +
+    P('acc', 'M67 23 C63.4 25 61 28.6 60.4 34 C63.4 30.6 66.4 28.4 69.6 26.4 Z') + ln('M67 23 C63.4 25 61 28.6 60.4 34 C63.4 30.6 66.4 28.4 69.6 26.4 Z', 1.2) +
+    cut('M68.4 18 A3.2 2.4 -15 0 1 72.6 17', 1),
     ' style="transform-origin:0% 100%"');
-  const legsFar = ln('M38 72 L36 93 M78 70 L80 93', 4.6);
+  const legsFar = ln('M38 72 L36 93 M77 70 L79 93', 4.4);
   const body = P('ink', 'M26 50 C34 46 60 46 74 50 C82 52 86 58 84 66 L86 90 L90 94.5 L80 94.5 L76.5 74 C68 74.5 52 74.5 44 72 L41 90 L45 94.5 L33 94.5 L30.5 74 C26 70 22 62 26 50Z') +
-    cut('M50 60 C58 63 66 63 74 60 M78 60 C80 64 80 68 79 72', 1.3) + cut('M32 62 L36 66 M33 70 L37 72', 1.2);
-  const mane = P('ink', spikes(22, 45, 13, 19.5, 11, 0, 360, 0.08)) + cut(spikes(22, 45, 15.5, 17.4, 11, 16, 376), 0.9);
+    cut('M78 60 C80 64 80 68 79 72', 1.4);
+  const mane = P('ink', spikes(23, 45, 14, 19.4, 9, 10, 370, 0));
   const face =
-    P('pi', 'M14 42 C14 33 30 33 30 42 C30 50 27 56 22 56 C17 56 14 50 14 42Z', ' stroke-width="1.4"') +
-    ln('M15.6 39 L20.6 41 M28.4 39 L23.4 41', 1.5) +
-    E('ink', 18.6, 42.4, 1.9, 1.3) + E('ink', 25.4, 42.4, 1.9, 1.3) +
-    ln('M22 43.6 L21 47 L22.6 47.4', 0.9) +
-    P('ink', 'M15.8 48.4 C18 54 26 54 28.2 48.4Z') +
-    cut('M17 49.6 L18 51 L19 49.6 L20 51 L21 49.6 L22 51 L23 49.6 L24 51 L25 49.6 L26 51 L27 49.6', 0.6);
-  const eyes = g('a-eyes', C('acc', 18.8, 42.5, 0.85) + C('acc', 25.2, 42.5, 0.85));
+    P('pi', 'M14 42 C14 32.6 32 32.6 32 42 C32 50.6 28.4 56.6 23 56.6 C17.6 56.6 14 50.6 14 42Z', ' stroke-width="1.5"') +
+    ln('M15.6 38.4 L21 41 M30.4 38.4 L25 41', 1.8) +
+    E('ink', 19, 42.4, 2.1, 1.4) + E('ink', 27, 42.4, 2.1, 1.4) +
+    ln('M23 43.6 L22 47.4 L23.8 47.6', 1) +
+    P('ink', 'M15.8 48.6 C18 55 28 55 30.2 48.6Z') +
+    cut('M17 49.6 L18.4 51.6 L19.8 49.6 L21.2 51.6 L22.6 49.6 L24 51.6 L25.4 49.6 L26.8 51.6 L28.2 49.6', 0.8);
+  const eyes = g('a-eyes', C('acc', 19.2, 42.5, 0.95) + C('acc', 26.8, 42.5, 0.95));
   return svg('art-mon art-manticore',
-    shadow(56, 38, 94.5, 3) + wingFar + g('a-body', legsFar + tail + body + wing + mane + face + eyes));
+    shadow(58, 36, 94.5, 3) + g('a-body', legsFar + tail + body + wing + mane + face + eyes));
 }
 
 function wyrm(): string {
   const coilOuter = 'M50 92 C20 92 8 84 10 74 C12 64 32 60 54 61 C78 62 92 68 90 78 C88 87 70 90 58 88';
   const coilInner = 'M58 88 C44 86 30 82 32 76 C34 70 54 69 66 72 C74 74 74 80 66 81';
-  const neck = 'M28 70 C20 56 24 42 34 36 C42 31 44 24 40 17';
+  const neck = 'M28 70 C20 56 24 44 34 39 C43 34 48 31 50 25';
   const spinePts = [[11, 70], [16, 64.6], [24, 61.6], [33, 60.4], [42, 60.2], [62, 61.2], [72, 62.4], [81, 64.6], [88, 69]];
   const spines = spinePts.map(([x, y]) => P('ink', `M${x - 3} ${y + 1} L${x - 1} ${y - 6} L${x + 3} ${y + 0.6}Z`)).join('') +
-    [[22, 57], [21, 49], [24, 41.6], [31, 35.6], [38, 30]].map(([x, y]) => P('ink', `M${x + 1} ${y + 3} L${x - 6} ${y - 1} L${x + 2} ${y - 3}Z`)).join('');
+    [[22, 57], [21, 49], [24.4, 42], [31.4, 37.4], [39, 33.4]].map(([x, y]) => P('ink', `M${x + 1} ${y + 3} L${x - 6} ${y - 1} L${x + 2} ${y - 3}Z`)).join('');
   const body =
     ln(coilOuter, 14) + cut(coilOuter, 4.4, ' stroke-dasharray="0.1 5.6"') +
     ln(coilInner, 12) + cut(coilInner, 3.6, ' stroke-dasharray="0.1 5.6"') +
-    ln(neck, 13) + cut('M34 70 C27 57 31 44 39.6 39 C46 35 49 28 46 20', 1.6, ' stroke-dasharray="2.6 1.8"');
+    ln(neck, 13) + cut('M34 70 C27 57 31 47 40 42.4 C48 38 53 34 55 28', 1.6, ' stroke-dasharray="2.6 1.8"');
   const claw = ln('M48 66 L56 56 M56 56 L60 54 M56 56 L60.6 57.6 M56 56 L58 52', 4) + ln('M56 56 L61 53.4 M56 56 L61.4 58 M56 56 L58.6 51.4', 1.6);
   const tail = g('a-limb', P('ink', 'M64 76 C72 76 82 80 92 86 C86 84 76 83 66 84 Z'), ' style="transform-origin:0% 50%"');
-  const head =
+  const head = g('',
     P('ink', 'M30 18 C32 9 42 6 50 8 L64 12 C67 13 68 16 66 18 L54 19 L66 22 C67 24 66 26 62 26 L48 26 C42 28 34 26 30 18Z') +
     P('ink', 'M36 10 C30 4 22 3 14 6 C22 7 28 10 31 15Z M41 7.6 C38 1 32 -1 26 0 C32 2 36 5 37 10Z') +
     cut('M20 5.4 C25 6.4 28.4 8.6 31 12', 1) +
     P('paper', 'M54 19 L56 21.6 L57.4 19.2 Z M59 19 L60.6 21 L61.6 18.8Z M56 22.2 L57 19.8 L58.4 22.2Z M61 22.2 L62 20 L63.2 22.4Z M64.6 18.4 L65.4 16.4 L66.2 18Z') +
     cut('M50 11 L62 13.6', 1) + C('paper', 64, 13.6, 0.8) +
-    cut('M34 21 C38 24 44 24.6 48 24', 1.2);
-  const eyes = g('a-eyes', P('acc', 'M42 12.4 L49 13.2 L45 15.8Z'));
+    cut('M34 21 C38 24 44 24.6 48 24', 1.2), ' transform="translate(14 7)"');
+  const eyes = g('a-eyes', P('acc', 'M56 19.4 L63 20.2 L59 22.8Z'));
   return svg('art-mon art-wyrm',
     shadow(50, 44, 94, 2.6) + g('a-body', tail + spines + body + claw + head + eyes));
 }
 
 function elderBeast(): string {
-  const sky = P('hatch', 'M0 0 H100 V60 H0Z');
-  const antlers = ln('M34 32 C28 22 24 14 26 4 M28 18 C22 16 16 10 14 2 M26 10 C30 6 34 4 38 0 M20 13 C14 14 8 12 4 8', 3.2) +
-    ln('M66 32 C72 22 76 14 74 4 M72 18 C78 16 84 10 86 2 M74 10 C70 6 66 4 62 0 M80 13 C86 14 92 12 96 8', 3.2);
+  const sky = P('hatch', 'M10 60 V30 C14 26 20 24 26 23 H74 C80 24 86 26 90 30 V60Z');
+  const antlers = ln('M37 32 C33 24 32 16 34 6 M33.4 24 C30.6 23.6 28.6 22.6 27.6 22.6 M32.6 16 C31 14 30 12 29.6 9.6 M34 10 C36 7 38 5 41 3.6', 3.2) +
+    ln('M63 32 C67 24 68 16 66 6 M66.6 24 C69.4 23.6 71.4 22.6 72.4 22.6 M67.4 16 C69 14 70 12 70.4 9.6 M66 10 C64 7 62 5 59 3.6', 3.2);
   const body = P('ink', 'M4 96 C2 64 14 36 50 28 C86 36 98 64 96 96 Z') +
     P('ink', fringe(50, 98, 45.4, 69.4, 26, 196, 344, 5));
   const grin = P('paper', 'M24 76 C34 84 66 84 76 76 C66 80 34 80 24 76Z') +
@@ -435,9 +447,9 @@ function elderBeast(): string {
     .map(([x, y], i) => E('acc', x, y, i < 4 ? 2.2 : 1.6, i < 4 ? 1.5 : 1.1)).join('');
   const eyes = g('a-eyes', bigEye(38, 56, 6) + bigEye(62, 56, 6) + bigEye(50, 64, 4) + smallEyes);
   const trees =
-    P('ink', 'M0 0 H9 C8 30 9 60 12 96 H0Z') + P('ink', 'M100 0 H91 C92 30 91 60 88 96 H100Z') +
-    ln('M8 22 L16 14 M8 40 L18 36 M92 26 L84 18 M92 46 L82 42', 2.2) +
-    cut('M4 6 C3.4 30 4 60 6 92 M96 6 C96.6 30 96 60 94 92', 1.1, ' stroke-dasharray="6 3"');
+    P('ink', 'M0 30 C3 26 6 24 10 23 C8.4 46 9 66 12 96 H0Z') + P('ink', 'M100 30 C97 26 94 24 90 23 C91.6 46 91 66 88 96 H100Z') +
+    ln('M8.6 34 L18 28 M8.6 48 L18 44 M91.4 34 L82 28 M91.4 48 L82 44', 2.2) +
+    cut('M4 32 C3.6 50 4 70 6 92 M96 32 C96.4 50 96 70 94 92', 1.1, ' stroke-dasharray="6 3"');
   const wanderer = P('ink', 'M47.2 99 L48 93 C47.2 91.6 47.4 90 48.6 89.4 C48 88.4 48.6 87 49.6 87 C50.6 87 51.2 88.4 50.6 89.4 C51.8 90 52 91.6 51.2 93 L52 99Z') +
     ln('M51.4 91 L54 92.4', 0.8) + C('acc', 54.4, 93.6, 0.9);
   return svg('art-mon art-elder',
@@ -624,31 +636,75 @@ function warden(): string {
   return svg('art-boss art-warden', door + g('a-body', body + keys + head + eyes));
 }
 
+type Pt = [number, number];
+/** Sample a chain of cubic beziers: [p0, c1, c2, p1, c1, c2, p2, ...]. Returns points + unit tangents, param u in [0, segments]. */
+function sampleChain(pts: Pt[], perSeg: number): Array<{ p: Pt; t: Pt; u: number }> {
+  const out: Array<{ p: Pt; t: Pt; u: number }> = [];
+  const n = (pts.length - 1) / 3;
+  for (let k = 0; k < n; k++) {
+    const [a, b, c, d] = [pts[k * 3], pts[k * 3 + 1], pts[k * 3 + 2], pts[k * 3 + 3]];
+    for (let i = k ? 1 : 0; i <= perSeg; i++) {
+      const t = i / perSeg, m = 1 - t;
+      const p: Pt = [0, 1].map((j) => m * m * m * a[j] + 3 * m * m * t * b[j] + 3 * m * t * t * c[j] + t * t * t * d[j]) as Pt;
+      const dv = [0, 1].map((j) => 3 * m * m * (b[j] - a[j]) + 6 * m * t * (c[j] - b[j]) + 3 * t * t * (d[j] - c[j]));
+      const len = Math.hypot(dv[0], dv[1]) || 1;
+      out.push({ p, t: [dv[0] / len, dv[1] / len], u: k + t });
+    }
+  }
+  return out;
+}
+
 function leech(): string {
+  // a long glossy segmented worm, tail curled on the ground, front end rearing up with a toothed sucker
+  const spine: Pt[] = [[13, 84], [22, 97], [50, 97], [68, 90], [88, 82], [92, 60], [80, 48], [70, 38], [60, 40], [53, 32]];
+  const width = (u: number): number =>
+    u < 1 ? 3 + 18 * Math.sin((u * Math.PI) / 2) : u < 2 ? 21 + 2 * Math.sin((u - 1) * Math.PI) : 21 - 6 * (u - 2);
+  const S = sampleChain(spine, 28);
+  const off = (i: number, k: number): string => {
+    const { p, t, u } = S[i];
+    const w = width(u) / 2;
+    return `${r1(p[0] - t[1] * w * k)} ${r1(p[1] + t[0] * w * k)}`;
+  };
+  const left = S.map((_, i) => off(i, 1));
+  const right = S.map((_, i) => off(i, -1)).reverse();
+  const outline = `M${left.join(' L')} L${right.join(' L')} Z`;
+  // segment rings, slightly bowed toward the tail
+  let rings = '';
+  for (let i = 8; i < S.length - 4; i += 6) {
+    const { p, t, u } = S[i];
+    const w = width(u) / 2 * 0.8;
+    const bow = Math.min(2.6, w * 0.3);
+    const hi = w * 0.42; // stop short of the sheen on the upper side
+    rings += `M${r1(p[0] - t[1] * hi)} ${r1(p[1] + t[0] * hi)} Q${r1(p[0] - t[0] * bow + t[1] * w * 0.2)} ${r1(p[1] - t[1] * bow - t[0] * w * 0.2)} ${r1(p[0] + t[1] * w)} ${r1(p[1] - t[0] * w)} `;
+  }
+  const streak = (k: number, from: number, to: number): string =>
+    'M' + S.filter((s) => s.u >= from && s.u <= to).map((s) => {
+      const i = S.indexOf(s);
+      return off(i, k);
+    }).join(' L');
   const body =
-    P('ink', 'M24 38 C21 56 28 72 42 82 C54 90 68 97 84 95 C97 93 99 80 95 69 C91 57 81 50 68 46 C57 42 52 34 50 24 Z') +
-    P('hatch', 'M30 64 C34 74 42 82 52 88 C62 93 72 96 82 95 L80 99 C66 99 50 94 40 87 C32 80 28 72 30 64Z') +
-    cut('M28 51 Q40 53 54 39 M33 62 Q47 64 62 47 M40 72 Q56 74 72 53 M50 81 Q67 83 84 60 M62 89 Q78 89 92 69', 1.7) +
-    cut('M78 93.6 Q89 90 96 80', 1.3) +
-    cut('M55 31 C59 40 67 45 78 50', 2.4) + cut('M82 53 C88 57 91 61 93 66', 1.6) +
-    P('acc', 'M70 66 C74 64 78 66 78 70 C76 72 72 72 70 66Z M60 76 C62 74.4 65 75 65 77.6 C63 79 61 78.6 60 76Z');
+    P('ink', outline) +
+    cut(rings, 1.2) +
+    cut(streak(0.62, 0.7, 2.86), 2.6) +
+    `<path class="acc-s" stroke-width="2" stroke-dasharray="2.4 3" d="${streak(-0.5, 0.7, 2.85)}"/>`;
   const teeth = (() => {
     let d = '';
-    const n = 14;
+    const n = 16;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2;
-      const a1 = a - 0.17, a2 = a + 0.17;
-      d += `M${r1(Math.cos(a1) * 13.4)} ${r1(Math.sin(a1) * 13.4)} L${r1(Math.cos(a) * 7.6)} ${r1(Math.sin(a) * 7.6)} L${r1(Math.cos(a2) * 13.4)} ${r1(Math.sin(a2) * 13.4)}Z `;
+      const a1 = a - 0.15, a2 = a + 0.15;
+      d += `M${r1(Math.cos(a1) * 13.6)} ${r1(Math.sin(a1) * 13.6)} L${r1(Math.cos(a) * 7.8)} ${r1(Math.sin(a) * 7.8)} L${r1(Math.cos(a2) * 13.6)} ${r1(Math.sin(a2) * 13.6)}Z `;
     }
     return P('paper', d);
   })();
-  const mouth = g('',
-    C('ink', 0, 0, 20) + cut('M0 0 m-16.4 0 a16.4 16.4 0 1 0 32.8 0 a16.4 16.4 0 1 0 -32.8 0', 2.4) +
-    teeth + C('ink', 0, 0, 7.2) + cut('M0 0 m-4.6 0 a4.6 4.6 0 1 0 9.2 0', 1, ' stroke-dasharray="1.4 1.6"') + cut('M-15 -13 C-9 -18 -2 -19 5 -17.6', 1.3),
-    ' transform="translate(36 28) rotate(-24) scale(1 .78)"');
-  const drips = P('acc', 'M28 44 C26 48 26.4 51 28.4 52.4 C30.4 51 30.4 48 28 44Z M37 45 C36 48 36.4 50 37.6 51 C39 50 38.8 48 37 45Z M30 57 C29 60 29.4 62 30.6 62.6 C32 61.6 31.6 59.6 30 57Z');
-  const eyes = g('a-eyes', C('paper', 54, 16.6, 1.3) + C('paper', 56.6, 21, 1.3) + C('paper', 57.6, 26, 1.1));
-  return svg('art-boss art-leech', E('hatch', 60, 96, 36, 3) + g('a-body', body + mouth + drips + eyes));
+  const sucker = g('',
+    C('ink', 0, 0, 19.6) + cut('M0 0 m-16.6 0 a16.6 16.6 0 1 0 33.2 0 a16.6 16.6 0 1 0 -33.2 0', 2.2) +
+    teeth + C('acc', 0, 0, 6.4) + C('ink', 0, 0, 2.6) +
+    cut('M-12 -14 C-6 -18.6 2 -19.4 8 -17', 1.6),
+    ' transform="translate(45 26) rotate(-42) scale(1 .7)"');
+  const drips = P('acc', 'M36 39 C34 43 34.4 46 36.4 47.4 C38.4 46 38.4 43 36 39Z M43 41 C42 44 42.4 46 43.6 47 C45 46 44.8 44 43 41Z M37 52 C36 55 36.4 57 37.6 57.6 C39 56.6 38.6 54.6 37 52Z');
+  const eyes = g('a-eyes', C('paper', 59.6, 39.4, 1.2) + C('paper', 62.6, 37, 1.2) + C('paper', 64.4, 42, 1));
+  return svg('art-boss art-leech', E('hatch', 52, 96.4, 40, 2.8) + g('a-body', body + sucker + drips + eyes));
 }
 
 function rustking(): string {

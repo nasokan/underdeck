@@ -27,9 +27,13 @@ if (gridSize) {
   const q = new URLSearchParams(location.search);
   const dark = q.has('dark');
   const from = Number(q.get('from')) || 0;
+  // ?zones outlines the card's rank/suit corner (x0-26 y0-22) and badge strip (x72-100 y0-14)
+  const box = (x: number, y: number, w: number, h: number): string =>
+    `<div style="position:absolute;left:calc(6px + ${x}px * ${gridSize} / 100);top:calc(6px + ${y}px * ${gridSize} / 100);width:calc(${w}px * ${gridSize} / 100);height:calc(${h}px * ${gridSize} / 100);outline:1px dashed #3e6a8a;pointer-events:none"></div>`;
+  const zones = q.has('zones') ? box(0, 0, 26, 22) + box(72, 0, 28, 14) : '';
   if (q.has('count')) all.splice(0, from), all.splice(Number(q.get('count')));
   app.innerHTML = `<style>.g .art{width:${gridSize}px;height:${gridSize}px}</style><div class="g" style="display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start">` +
-    all.map((a) => `<div class="${dark ? 'dark' : 'card'}">${a}</div>`).join('') +
+    all.map((a) => `<div class="${dark ? 'dark' : 'card'}" style="position:relative">${a}${zones}</div>`).join('') +
     RELICS.map((k) => `<div class="${dark ? 'dark' : 'card'}" style="padding:4px">${relicIcon(k).replace('<svg', '<svg style="width:22px;height:22px"')}</div>`).join('') + '</div>';
 } else {
 let html = '<h2>Undead (spades)</h2>';
