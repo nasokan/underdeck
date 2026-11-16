@@ -1,0 +1,50 @@
+/* Underdeck art: woodcut / ink-print classes used by src/art.ts.
+   The game defines --ink, --paper and --blood; fallbacks keep the art usable on its own.
+   Drawings read --art-ink / --art-paper, which default to --ink / --paper. Put .art-invert on the
+   svg or an ancestor to print a drawing in negative (e.g. a relic icon on the dark page).
+   Hatch patterns live in artDefs() and always use --ink. */
+
+.art {
+  --art-ink: var(--ink, #1d1b16);
+  --art-paper: var(--paper, #ece3cd);
+  display: block;
+  overflow: visible;
+  fill: none;
+  stroke: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.art-invert .art, .art.art-invert {
+  --art-ink: var(--paper, #ece3cd);
+  --art-paper: var(--ink, #1d1b16);
+}
+
+.art .ink     { fill: var(--art-ink); }
+.art .paper   { fill: var(--art-paper); }
+.art .acc     { fill: var(--blood, #b8322a); }
+.art .pi      { fill: var(--art-paper); stroke: var(--art-ink); }  /* paper shape, ink outline */
+.art .cut     { fill: none; stroke: var(--art-paper); }            /* carved highlight */
+.art .line    { fill: none; stroke: var(--art-ink); }              /* ink stroke */
+.art .acc-s   { fill: none; stroke: var(--blood, #b8322a); }       /* red stroke */
+.art .hatch   { fill: url(#ud-hatch); }
+.art .hatch2  { fill: url(#ud-hatch2); }
+.art .xhatch  { fill: url(#ud-xhatch); }
+.art .carve   { fill: url(#ud-carve); }    /* paper lines, texture on ink */
+.art .hatch-s { fill: url(#ud-hatch-s); }  /* fine hatch for 24-unit relic icons */
+
+/* pattern strokes (inside artDefs) */
+.ud-pl { stroke: var(--ink, #1d1b16); }
+.ud-pc { stroke: var(--paper, #ece3cd); }
+
+/* Animation hooks. The game supplies the keyframes; these set the pivots.
+   Some .a-limb groups override transform-origin inline (shoulder, tail root...). */
+.art .a-body   { transform-box: fill-box; transform-origin: 50% 100%; }
+.art .a-limb   { transform-box: fill-box; transform-origin: 50% 0%; }
+.art .a-eyes   { transform-box: fill-box; transform-origin: 50% 50%; }
+.art .a-blade  { transform-box: fill-box; transform-origin: 50% 50%; }
+.art .a-liquid { transform-box: fill-box; transform-origin: 50% 100%; }
+.art .a-bubbles circle { transform-box: fill-box; transform-origin: 50% 50%; }
+
+/* Optional extras the game may toggle */
+.art.rough { filter: url(#ud-rough); }           /* wobbly woodcut edges (costly while animating) */
+.art.glow .a-eyes, .glow .art .a-eyes { filter: url(#ud-glow); }

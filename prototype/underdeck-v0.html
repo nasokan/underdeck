@@ -1,0 +1,636 @@
+<title>Underdeck</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Grenze:wght@500;600;700&family=Alegreya+Sans:wght@400;500;700;800&display=swap">
+<style>
+/* Layout: a dungeon table. Status rail on the left, the room in the middle, ledger below; one column on phones.
+   Deliberately single-theme: damp stone with bone cards and a brass accent. */
+:root{
+  --bg:#131917; --stone:#1b2320; --stone-2:#232d29; --line:#33403a;
+  --bone:#ece3cd; --bone-2:#d8cdb2; --ink:#1d1b16;
+  --brass:#d6a84a; --brass-dim:#8e7234; --blood:#cf4a40; --steel:#4f86a0; --moss:#86b47d;
+  --text:#e7e2d5; --muted:#94a199;
+  --f-display:'Grenze', 'Palatino Linotype', Georgia, serif;
+  --f-body:'Alegreya Sans', 'Segoe UI', system-ui, sans-serif;
+  --card-w:clamp(78px, 19vw, 118px);
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--text)}
+body{font-family:var(--f-body);font-size:15px;line-height:1.45;min-height:100%;
+  background:radial-gradient(ellipse at 50% -10%, #22302a 0%, var(--bg) 60%) fixed, var(--bg)}
+#app{max-width:1120px;margin:0 auto;padding-block:16px 40px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+h1,h2,h3{font-family:var(--f-display);font-weight:700;margin:0;text-wrap:balance;letter-spacing:.01em}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,.card:focus-visible{outline:2px solid var(--brass);outline-offset:3px}
+.num{font-variant-numeric:tabular-nums}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:700}
+
+/* buttons */
+.btn{background:var(--stone-2);border:1px solid var(--line);border-radius:6px;padding:9px 14px;text-align:left;
+  display:flex;flex-direction:column;gap:1px;transition:border-color .15s, background .15s}
+.btn:hover:not(:disabled){border-color:var(--brass)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn b{font-weight:800}
+.btn small{color:var(--muted);font-size:13px}
+.btn.primary{background:var(--brass);color:var(--ink);border-color:var(--brass)}
+.btn.primary small{color:#3b3018}
+.btn.primary:hover:not(:disabled){background:#e4b955}
+.btn.fatal{border-color:var(--blood)}
+.btn.fatal b{color:var(--blood)}
+.btn.center{align-items:center;text-align:center}
+
+/* top bar */
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;
+  padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.where h1{font-size:30px;line-height:1}
+.where .sub{color:var(--muted);font-size:14px;margin-top:4px}
+.glorybar{flex:1 1 260px;min-width:0;max-width:420px}
+.glorybar .row{display:flex;justify-content:space-between;align-items:baseline}
+.glorybar .big{font-family:var(--f-display);font-size:26px;color:var(--brass)}
+.track{height:10px;background:var(--stone-2);border-radius:5px;overflow:hidden;border:1px solid var(--line);margin-top:4px}
+.track i{display:block;height:100%;background:linear-gradient(90deg,var(--brass-dim),var(--brass));transition:width .4s}
+.coins{font-family:var(--f-display);font-size:24px;color:var(--brass)}
+
+/* play layout */
+.table{display:grid;grid-template-columns:230px minmax(0,1fr);gap:22px;align-items:start}
+.rail{display:flex;flex-direction:column;gap:16px}
+.panel{background:var(--stone);border:1px solid var(--line);border-radius:8px;padding:14px}
+.hp .val{font-family:var(--f-display);font-size:30px;line-height:1}
+.hp .track i{background:linear-gradient(90deg,#8d2b25,var(--blood))}
+.stat{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed var(--line)}
+.stat:last-child{border-bottom:0}
+.stat span:last-child{font-weight:700}
+.wslot{display:flex;gap:12px;align-items:flex-start}
+.wslot .empty{width:64px;aspect-ratio:5/7;border:1px dashed var(--line);border-radius:6px;display:grid;place-items:center;color:var(--muted);font-size:12px;text-align:center}
+.trail{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.trail span{font-size:12px;background:var(--stone-2);border:1px solid var(--line);border-radius:3px;padding:0 5px}
+.chain{font-family:var(--f-display);font-size:24px;color:var(--brass);line-height:1}
+
+.room{position:relative}
+.roomhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.roomhead h2{font-size:22px}
+.cards{display:flex;flex-wrap:wrap;gap:14px;min-height:calc(var(--card-w) * 1.4)}
+.actions{margin-top:18px;min-height:70px;display:flex;flex-wrap:wrap;gap:10px;align-items:stretch}
+.actions .hint{color:var(--muted);align-self:center}
+.fx{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.pop{position:absolute;font-family:var(--f-display);font-size:28px;font-weight:700;white-space:nowrap;
+  animation:rise 1.3s ease-out forwards;text-shadow:0 2px 0 #0008}
+.pop.g{color:var(--brass)} .pop.d{color:var(--blood)} .pop.h{color:var(--moss)} .pop.c{color:#f0d48a;font-size:20px}
+@keyframes rise{0%{opacity:0;transform:translateY(10px)}15%{opacity:1}100%{opacity:0;transform:translateY(-60px)}}
+body.hurt .room .cards{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+
+/* cards */
+.card{width:var(--card-w);aspect-ratio:5/7;background:var(--bone);color:var(--ink);border-radius:8px;position:relative;
+  border:2px solid var(--bone-2);box-shadow:0 3px 0 #0006, 0 8px 18px #0005;padding:6px 7px;
+  display:flex;flex-direction:column;justify-content:space-between;text-align:left;
+  transition:transform .15s, box-shadow .15s;animation:deal .3s ease-out both}
+@keyframes deal{from{opacity:0;transform:translateY(-14px) rotate(-3deg)}}
+button.card:hover{transform:translateY(-4px)}
+.card.sel{transform:translateY(-8px);box-shadow:0 0 0 3px var(--brass), 0 12px 22px #0007}
+.card .corner{font-family:var(--f-display);font-weight:700;font-size:calc(var(--card-w) * .2);line-height:1}
+.card .pip{position:absolute;inset:0;display:grid;place-items:center;font-size:calc(var(--card-w) * .42);opacity:.9;pointer-events:none}
+.card .role{font-size:calc(var(--card-w) * .1);font-weight:800;text-transform:uppercase;letter-spacing:.06em;position:relative}
+.card .tip{font-size:calc(var(--card-w) * .095);font-weight:700;position:relative;line-height:1.1}
+.card.S,.card.C{color:var(--ink)}
+.card.D{color:var(--steel)}
+.card.H{color:var(--blood)}
+.card.gild{border-color:var(--brass);background:linear-gradient(160deg,#f6e7bd,var(--bone) 45%)}
+.card .badges{position:absolute;top:5px;right:6px;display:flex;gap:2px;font-size:11px;font-weight:800}
+.badge{background:var(--ink);color:var(--bone);border-radius:3px;padding:0 3px}
+.badge.gold{background:var(--brass);color:var(--ink)}
+.card.back{background:repeating-linear-gradient(45deg,#2c3833 0 8px,#26302c 8px 16px);border-color:var(--brass-dim);color:var(--brass)}
+.card.back .pip{font-family:var(--f-display);opacity:1}
+.card.mini{--card-w:62px;animation:none;box-shadow:0 2px 0 #0006}
+
+/* relics */
+.relics{display:flex;flex-wrap:wrap;gap:8px}
+.relic{background:var(--stone-2);border:1px solid var(--brass-dim);border-radius:6px;padding:6px 10px;max-width:260px}
+.relic b{font-family:var(--f-display);color:var(--brass);font-size:16px;display:block}
+.relic span{font-size:13px;color:var(--muted)}
+.ledger{margin-top:22px;display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px}
+.log{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:3px;max-height:190px;overflow:auto}
+.log div:first-child{color:var(--text)}
+details.rules{font-size:14px;color:var(--muted)}
+details.rules summary{cursor:pointer;color:var(--text);font-weight:700}
+details.rules ul{padding-left:18px;margin:8px 0 0}
+.boss{border-left:3px solid var(--blood);padding-left:10px}
+.boss b{color:var(--blood);font-family:var(--f-display);font-size:17px}
+
+/* screens */
+.screen{max-width:680px;margin:6vh auto 0;display:flex;flex-direction:column;gap:18px}
+.screen h1{font-size:clamp(44px,10vw,76px);line-height:.95;color:var(--brass)}
+.screen h2{font-size:34px}
+.screen p{margin:0;max-width:60ch}
+.rewards .stat{font-size:16px}
+.shopgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.offer{background:var(--stone);border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.offer.relicoffer{border-color:var(--brass-dim)}
+.offer h3{font-size:19px}
+.offer .relicoffer h3, .offer.relicoffer h3{color:var(--brass)}
+.offer p{margin:0;font-size:14px;color:var(--muted);flex:1}
+.offer .btn{align-items:center}
+.offer.sold{opacity:.35}
+.section-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin:22px 0 10px}
+.section-h h2{font-size:24px}
+
+.modal{position:fixed;inset:0;background:#000b;display:grid;place-items:center;z-index:20;
+  padding:max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px))}
+.modal .box{background:var(--stone);border:1px solid var(--line);border-radius:10px;padding:18px;max-width:760px;width:100%;max-height:85vh;overflow:auto}
+.modal .grid{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.modal .grid .card.dim{opacity:.3;cursor:not-allowed}
+
+@media (max-width:760px){
+  .table{grid-template-columns:minmax(0,1fr)}
+  .rail{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .rail .wide{grid-column:1 / -1}
+  .ledger{grid-template-columns:minmax(0,1fr)}
+  .where h1{font-size:24px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+
+<div id="app"></div>
+
+<script>
+/* ---------------- data ---------------- */
+const SYM={S:'♠',C:'♣',D:'♦',H:'♥'};
+const RN=v=>({11:'J',12:'Q',13:'K',14:'A'}[v]||String(v));
+let uid=1;
+const mk=(suit,v)=>({id:uid++,suit,v,gild:false,serr:false});
+function baseDeck(){const d=[];for(let v=2;v<=14;v++){d.push(mk('S',v),mk('C',v));}for(let v=2;v<=10;v++){d.push(mk('D',v),mk('H',v));}return d;}
+const isMon=c=>c.suit==='S'||c.suit==='C';
+
+const RELICS={
+  whetstone:{name:'Whetstone',desc:'Your weapon can also hit monsters equal to its last kill.',cost:6},
+  trophy:{name:'Trophy Rack',desc:'+1 Fury for every 4 kills this floor.',cost:7},
+  cloak:{name:"Coward's Cloak",desc:'+1 flee per floor.',cost:5},
+  blood:{name:'Blood Price',desc:'Potions stop healing. Each one gives +2 Fury for the rest of the floor.',cost:6},
+  packrat:{name:'Pack Rat',desc:'Rooms advance after you resolve 2 cards instead of 3.',cost:7},
+  duelist:{name:'Duelist',desc:'×2 Glory on a kill that leaves you at 5 HP or less.',cost:6},
+  exec:{name:'Executioner',desc:'A weapon kill that deals you 0 damage gains Valor equal to the weapon’s power.',cost:6},
+  hoarder:{name:'Hoarder',desc:'When a room is completed, gain Glory equal to your gold.',cost:7},
+  irongut:{name:'Iron Gut',desc:'+6 max HP.',cost:5},
+  scavenger:{name:'Scavenger',desc:'Replacing a weapon pays gold equal to its chain.',cost:4},
+  glass:{name:'Glass Blade',desc:'+3 Fury on weapon kills. −6 max HP.',cost:6},
+  bloodletter:{name:'Bloodletter',desc:'Brawl kills use your weapon’s chain for Fury.',cost:6},
+  tooth:{name:'Gilded Tooth',desc:'+1 gold for each monster above 10 you kill.',cost:5},
+};
+const BOSSES={
+  warden:{name:'The Warden',desc:'You cannot flee.'},
+  leech:{name:'The Leech',desc:'Potions heal half.'},
+  rust:{name:'The Rustking',desc:'Weapons break after 3 kills.'},
+  crown:{name:'The Hollow Crown',desc:'J, Q and K monsters count as 15.'},
+  mimic:{name:'The Mimic',desc:'One card per room is face-down and resolves blind when you pick it.'},
+  swarm:{name:'The Swarm',desc:'Rooms hold 5 cards and you resolve 4.'},
+};
+const FLOORS=['Hall','Vault','Lair'];
+// Tuning knobs. Targets for Hall / Vault / Lair at Depth 1, multiplied by GROWTH each Depth.
+const BASE=[35,60,90], DEPTHS=8, GROWTH=1.45, MAX_RELICS=5;
+const target=(d,fi)=>Math.round(BASE[fi]*Math.pow(GROWTH,d-1)/5)*5;
+
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;};
+const pickN=(a,n)=>shuffle([...a]).slice(0,n);
+const rnd=(lo,hi)=>lo+Math.floor(Math.random()*(hi-lo+1));
+
+/* ---------------- state ---------------- */
+let S=null;
+const has=k=>S.relics.includes(k);
+const F=()=>S.f;
+function log(t){S.log.unshift(t);S.log=S.log.slice(0,30);}
+function fx(text,kind){S.fx.push({text,kind});}
+
+function newRun(){
+  uid=1;
+  const bosses=shuffle(Object.keys(BOSSES));
+  while(bosses.length<DEPTHS) bosses.push(...shuffle(Object.keys(BOSSES)));
+  S={screen:'play',depth:1,fi:0,gold:4,hp:20,maxHp:20,relics:[],sigils:{S:0,C:0,D:0,H:0},
+     deck:baseDeck(),bosses:bosses.slice(0,DEPTHS),totalGlory:0,f:null,shop:null,summary:null,
+     log:[],sel:null,picker:null,modal:null,fx:[],cause:''};
+  startFloor();
+}
+
+function startFloor(){
+  const boss=S.fi===2?S.bosses[S.depth-1]:null;
+  S.f={boss,target:target(S.depth,S.fi),glory:0,draw:shuffle([...S.deck]),room:[],weapon:null,kills:0,
+       bonusFury:0,potionUsed:false,resolved:0,fleesLeft:boss==='warden'?0:1+(has('cloak')?1:0),fledLast:false,roomNo:0};
+  S.sel=null;S.screen='play';
+  log(`Entered Depth ${S.depth} ${FLOORS[S.fi]}. Target: ${F().target} Glory.`);
+  if(boss) log(`${BOSSES[boss].name}: ${BOSSES[boss].desc}`);
+  dealRoom();
+}
+const roomSize=()=>S&&S.f&&S.f.boss==='swarm'?5:4;
+const carry=()=>S&&has('packrat')?2:1;
+function dealRoom(){
+  const f=F();const before=f.room.length;
+  while(f.room.length<roomSize()&&f.draw.length) f.room.push({c:f.draw.shift(),hidden:false});
+  if(f.boss==='mimic'&&f.room.length>1&&!f.room.some(r=>r.hidden)){
+    const fresh=f.room.slice(before);if(fresh.length) fresh[rnd(0,fresh.length-1)].hidden=true;
+  }
+  f.potionUsed=false;f.resolved=0;f.roomNo++;S.sel=null;
+}
+function fleeState(){
+  const f=F();
+  if(f.boss==='warden') return [false,'The Warden bars the way'];
+  if(f.fleesLeft<=0) return [false,'No flees left'];
+  if(f.fledLast) return [false,'You fled the last room'];
+  if(f.resolved>0) return [false,'Only before you act'];
+  if(!f.draw.length) return [false,'Nowhere left to run'];
+  return [true,`${f.fleesLeft} left · cards go to the bottom`];
+}
+function flee(){
+  const f=F();if(!fleeState()[0])return;
+  f.draw.push(...f.room.map(r=>r.c));f.room=[];f.fleesLeft--;dealRoom();f.fledLast=true;
+  log('You fled. The room shuffles to the bottom of the dungeon.');
+}
+
+const wPow=()=>F().weapon?F().weapon.card.v+S.sigils.D:0;
+const monVal=c=>(F().boss==='crown'&&c.v>=11&&c.v<=13)?15:c.v;
+function canWeapon(c){
+  const w=F().weapon;if(!w)return false;if(w.last==null)return true;
+  const mv=monVal(c);return has('whetstone')?mv<=w.last:mv<w.last;
+}
+function killScore(c,useW){
+  const f=F(),w=f.weapon,mv=monVal(c);
+  let valor=mv+S.sigils[c.suit]*3, fury=1+f.bonusFury;
+  if(has('trophy')) fury+=Math.floor(f.kills/4);
+  if(useW){fury+=w.chain;if(has('glass'))fury+=3;}
+  else if(w&&has('bloodletter')) fury+=w.chain;
+  const dmg=useW?Math.max(0,mv-wPow()):mv;
+  if(useW&&dmg===0&&has('exec')) valor+=wPow();
+  let glory=valor*fury,dbl=false;const after=S.hp-dmg;
+  if(has('duelist')&&after>0&&after<=5){glory*=2;dbl=true;}
+  return {mv,valor,fury,dmg,glory,dbl};
+}
+function healAmt(c){let h=c.v+S.sigils.H*2;if(F().boss==='leech')h=Math.floor(h/2);return h;}
+
+function resolve(id,mode){
+  const f=F();const idx=f.room.findIndex(r=>r.c.id===id);if(idx<0)return;
+  const r=f.room[idx],c=r.c;
+  if(r.hidden){ // blind resolution
+    if(isMon(c)) mode=canWeapon(c)?'weapon':'brawl';
+    log(`The Mimic's card was ${RN(c.v)}${SYM[c.suit]}.`);
+  }
+  f.room.splice(idx,1);f.resolved++;S.sel=null;
+  if(c.gild){S.gold+=3;fx('+3 gold','c');}
+  if(isMon(c)){
+    const useW=mode==='weapon'&&canWeapon(c);
+    const s=killScore(c,useW);
+    S.hp-=s.dmg;
+    if(s.dmg>0){fx(`−${s.dmg} HP`,'d');document.body.classList.add('hurt');setTimeout(()=>document.body.classList.remove('hurt'),320);}
+    if(S.hp<=0){S.hp=0;S.cause=`Slain by the ${RN(c.v)}${SYM[c.suit]}`;return die();}
+    f.glory+=s.glory;S.totalGlory+=s.glory;f.kills++;
+    fx(`+${s.glory}${s.dbl?' ×2':''}`,'g');
+    if(has('tooth')&&s.mv>10){S.gold++;}
+    if(useW){
+      const w=f.weapon;w.last=s.mv;w.chain++;w.kills++;w.trail.push(s.mv);
+      log(`Slew ${RN(c.v)}${SYM[c.suit]} with ♦${wPow()}: took ${s.dmg}, ${s.valor} × ${s.fury} = ${s.glory} Glory.`);
+      if(f.boss==='rust'&&w.kills>=3){log(`Your ♦${w.card.v} rusts through and breaks.`);f.weapon=null;}
+    } else log(`Brawled ${RN(c.v)}${SYM[c.suit]}: took ${s.dmg}, ${s.valor} × ${s.fury} = ${s.glory} Glory.`);
+  } else if(c.suit==='D'){
+    const old=f.weapon;
+    if(old&&has('scavenger')&&old.chain){S.gold+=old.chain;fx(`+${old.chain} gold`,'c');}
+    f.weapon={card:c,last:null,chain:c.serr?1:0,kills:0,trail:[]};
+    log(`Equipped ♦${c.v}${old?` (dropped ♦${old.card.v}, chain ${old.chain})`:''}.`);
+  } else {
+    if(has('blood')){f.bonusFury+=2;fx('+2 Fury','g');log(`Drank ♥${c.v} for blood: +2 Fury this floor.`);}
+    else if(!f.potionUsed){const h=Math.min(healAmt(c),S.maxHp-S.hp);S.hp+=h;f.potionUsed=true;fx(`+${h} HP`,'h');log(`Drank ♥${c.v}: healed ${h}.`);}
+    else {S.gold+=2;fx('+2 gold','c');log(`Sold the spare ♥${c.v} for 2 gold.`);}
+  }
+  if(f.glory>=f.target) return clearFloor();
+  if(f.room.length<=carry()&&f.draw.length){
+    if(has('hoarder')&&S.gold){f.glory+=S.gold;S.totalGlory+=S.gold;log(`Hoarder: +${S.gold} Glory.`);if(f.glory>=f.target)return clearFloor();}
+    f.fledLast=false;dealRoom();
+  } else if(!f.room.length&&!f.draw.length){
+    S.cause=`The ${FLOORS[S.fi]} ran out of cards ${f.target-f.glory} Glory short`;return die();
+  }
+}
+
+function die(){
+  S.screen='dead';saveBest();
+}
+function saveBest(){
+  try{const b=JSON.parse(localStorage.getItem('underdeck-best')||'null');
+    const cur={depth:S.depth,fi:S.fi,glory:S.totalGlory};
+    if(!b||cur.depth*3+cur.fi>b.depth*3+b.fi||(cur.depth*3+cur.fi===b.depth*3+b.fi&&cur.glory>b.glory))
+      localStorage.setItem('underdeck-best',JSON.stringify(cur));}catch(e){}
+}
+function getBest(){try{return JSON.parse(localStorage.getItem('underdeck-best')||'null');}catch(e){return null;}}
+
+function clearFloor(){
+  const f=F();const lines=[];
+  const base=[4,5,6][S.fi];lines.push([`${FLOORS[S.fi]} cleared`,base]);
+  if(f.fleesLeft>0) lines.push([`Unused flees`,f.fleesLeft]);
+  const interest=Math.min(5,Math.floor(S.gold/5));if(interest) lines.push([`Interest (1 per 5 held)`,interest]);
+  if(S.fi===2){const hb=Math.floor(S.hp/4);if(hb)lines.push([`Remaining HP (1 per 4)`,hb]);}
+  const total=lines.reduce((a,l)=>a+l[1],0);S.gold+=total;
+  S.summary={lines,total,glory:f.glory,target:f.target,overkill:f.glory-f.target};
+  if(S.fi===2) S.hp=S.maxHp; else S.hp+=Math.ceil((S.maxHp-S.hp)/2);
+  if(S.depth===DEPTHS&&S.fi===2){S.screen='victory';saveBest();return;}
+  S.screen='cleared';
+}
+
+/* ---------------- shop ---------------- */
+const SIGIL_DESC={S:'Spades give +3 Valor per level.',C:'Clubs give +3 Valor per level.',D:'Weapons gain +1 power per level.',H:'Potions heal +2 more per level.'};
+function goodsPool(){
+  const suit=['S','C','D','H'][rnd(0,3)];
+  return [
+    {k:'tonic',name:'Tonic',desc:'Heal 8 HP now.',cost:3},
+    {k:'sigil',suit,name:`Sigil of ${SYM[suit]}`,desc:`${SIGIL_DESC[suit]} (now Lv ${S.sigils[suit]})`,cost:4+S.sigils[suit]*2},
+    {k:'purge',name:'Purge',desc:'Remove one card from your deck.',cost:4},
+    {k:'gild',name:'Gilding Scroll',desc:'Gild a card: +3 gold each time you resolve it.',cost:3},
+    {k:'hone',name:'Honing Scroll',desc:'Make a ♦ Serrated: its chain starts at 1.',cost:3},
+    {k:'armory',name:'Armory Crate',desc:'Add a random ♦8–10 to your deck.',cost:4},
+    {k:'apoth',name:'Apothecary Crate',desc:'Add a random ♥7–10 to your deck.',cost:3},
+    {k:'bounty',name:'Bounty Notice',desc:'Add a random ♠/♣ J–A. More danger, more Valor.',cost:1},
+  ];
+}
+function makeShop(){
+  const owned=new Set(S.relics);
+  const relics=pickN(Object.keys(RELICS).filter(k=>!owned.has(k)),3).map(k=>({k,sold:false}));
+  const goods=pickN(goodsPool(),4).map(g=>({...g,sold:false}));
+  S.shop={relics,goods,reroll:S.shop?S.shop.reroll:2};
+  S.shop.reroll=2;S.screen='shop';
+}
+function reroll(){if(S.gold<S.shop.reroll)return;S.gold-=S.shop.reroll;const r=S.shop.reroll+1;
+  const owned=new Set(S.relics);
+  S.shop.relics=pickN(Object.keys(RELICS).filter(k=>!owned.has(k)),3).map(k=>({k,sold:false}));
+  S.shop.goods=pickN(goodsPool(),4).map(g=>({...g,sold:false}));S.shop.reroll=r;}
+function applyRelic(k,sign){
+  if(k==='irongut'){S.maxHp+=6*sign;}
+  if(k==='glass'){S.maxHp-=6*sign;}
+  if(sign>0&&k==='irongut') S.hp+=6;
+  S.hp=Math.max(1,Math.min(S.hp,S.maxHp));
+}
+function buyRelic(i){const o=S.shop.relics[i];const r=RELICS[o.k];
+  if(o.sold||S.gold<r.cost||S.relics.length>=MAX_RELICS)return;
+  S.gold-=r.cost;S.relics.push(o.k);o.sold=true;applyRelic(o.k,1);}
+function sellRelic(k){const i=S.relics.indexOf(k);if(i<0)return;S.relics.splice(i,1);S.gold+=Math.floor(RELICS[k].cost/2);applyRelic(k,-1);}
+function buyGood(i){const g=S.shop.goods[i];if(g.sold||S.gold<g.cost)return;
+  if(['purge','gild','hone'].includes(g.k)){S.picker={k:g.k,i};return;}
+  S.gold-=g.cost;g.sold=true;
+  if(g.k==='tonic') S.hp=Math.min(S.maxHp,S.hp+8);
+  if(g.k==='sigil') S.sigils[g.suit]++;
+  if(g.k==='armory') S.deck.push(mk('D',rnd(8,10)));
+  if(g.k==='apoth') S.deck.push(mk('H',rnd(7,10)));
+  if(g.k==='bounty') S.deck.push(mk(Math.random()<.5?'S':'C',rnd(11,14)));
+}
+const PICK={
+  purge:{title:'Purge a card',ok:c=>true},
+  gild:{title:'Gild a card',ok:c=>!c.gild},
+  hone:{title:'Hone a weapon',ok:c=>c.suit==='D'&&!c.serr},
+};
+function pick(id){const p=S.picker;const c=S.deck.find(x=>x.id===id);if(!p||!c||!PICK[p.k].ok(c))return;
+  const g=S.shop.goods[p.i];S.gold-=g.cost;g.sold=true;
+  if(p.k==='purge') S.deck=S.deck.filter(x=>x.id!==id);
+  if(p.k==='gild') c.gild=true;
+  if(p.k==='hone') c.serr=true;
+  S.picker=null;}
+function leaveShop(){S.fi++;if(S.fi>2){S.fi=0;S.depth++;}S.shop=null;startFloor();}
+
+/* ---------------- render ---------------- */
+const $app=document.getElementById('app');
+function cardHTML(c,o={}){
+  const role=isMon(c)?'Monster':c.suit==='D'?'Weapon':'Potion';
+  const tag=o.button?'button':'div';
+  const badges=[c.gild?'<span class="badge gold" title="Gilded">G</span>':'',c.serr?'<span class="badge" title="Serrated">S</span>':''].join('');
+  return `<${tag} class="card ${c.suit} ${c.gild?'gild':''} ${o.mini?'mini':''} ${o.sel?'sel':''} ${o.dim?'dim':''}" ${o.attrs||''} aria-label="${RN(c.v)} of ${SYM[c.suit]} ${role}">
+    <span class="corner">${RN(c.v)}<br>${SYM[c.suit]}</span>
+    <span class="pip">${SYM[c.suit]}</span>
+    <span class="badges">${badges}</span>
+    ${o.mini?'':`<span><span class="role">${role}${isMon(c)&&monVal(c)!==c.v?' 15':''}</span>${o.tip?`<br><span class="tip">${o.tip}</span>`:''}</span>`}
+  </${tag}>`;
+}
+function backHTML(id,i){return `<button class="card back" data-act="sel" data-arg="${id}" aria-label="Face-down card"><span class="corner">?</span><span class="pip">?</span><span class="role">Blind</span></button>`;}
+
+function topBar(){
+  const f=F();const pct=Math.min(100,f.glory/f.target*100);
+  const boss=BOSSES[S.bosses[S.depth-1]];
+  return `<div class="top">
+    <div class="where"><div class="label">Depth ${S.depth} of ${DEPTHS}</div><h1>${FLOORS[S.fi]}${f.boss?` · ${BOSSES[f.boss].name}`:''}</h1>
+      <div class="sub">${S.fi<2?`Lair boss ahead: <b>${boss.name}</b> (${boss.desc})`:BOSSES[f.boss].desc}</div></div>
+    <div class="glorybar"><div class="row"><span class="label">Glory</span><span class="num"><span class="big">${f.glory}</span> / ${f.target}</span></div>
+      <div class="track"><i style="width:${pct}%"></i></div></div>
+    <div><div class="label">Gold</div><div class="coins num">${S.gold}</div></div>
+  </div>`;
+}
+function railHTML(){
+  const f=F(),w=f.weapon;
+  const hpPct=S.hp/S.maxHp*100;
+  let wbox;
+  if(w){
+    wbox=`<div class="wslot">${cardHTML(w.card,{mini:true})}<div>
+      <div class="label">Chain</div><div class="chain num">×${1+w.chain}</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">${w.last==null?'Fresh: hits anything':`Next kill must be ${has('whetstone')?'≤':'<'} ${w.last}`}</div>
+      </div></div>${w.trail.length?`<div class="trail">${w.trail.map(v=>`<span class="num">${v}</span>`).join('')}</div>`:''}
+      ${S.sigils.D?`<div style="font-size:13px;color:var(--muted);margin-top:6px">Power ${wPow()} (sigil +${S.sigils.D})</div>`:''}`;
+  } else wbox=`<div class="wslot"><div class="empty">No weapon</div><div style="font-size:13px;color:var(--muted)">Fighting bare-handed means full damage.</div></div>`;
+  const fb=f.bonusFury+(has('trophy')?Math.floor(f.kills/4):0);
+  return `<aside class="rail">
+    <div class="panel hp"><div class="label">Health</div><div class="val num">${S.hp}<span style="font-size:16px;color:var(--muted)"> / ${S.maxHp}</span></div><div class="track"><i style="width:${hpPct}%"></i></div></div>
+    <div class="panel"><div class="label" style="margin-bottom:8px">Weapon</div>${wbox}</div>
+    <div class="panel wide">
+      <div class="stat"><span>Cards left in dungeon</span><span class="num">${f.draw.length}</span></div>
+      <div class="stat"><span>Flees left</span><span class="num">${f.fleesLeft}</span></div>
+      <div class="stat"><span>Kills this floor</span><span class="num">${f.kills}</span></div>
+      ${fb?`<div class="stat"><span>Bonus Fury</span><span class="num">+${fb}</span></div>`:''}
+      <div class="stat"><span>Potion used this room</span><span>${has('blood')?'—':f.potionUsed?'Yes':'No'}</span></div>
+      <div class="stat"><span>Deck</span><span><button class="linkish" data-act="deck" style="background:none;border:0;color:var(--brass);padding:0;font-weight:700">${S.deck.length} cards</button></span></div>
+    </div>
+  </aside>`;
+}
+function tipFor(c){
+  if(!isMon(c)){
+    if(c.suit==='D') return `Power ${c.v+S.sigils.D}`;
+    if(has('blood')) return '+2 Fury';
+    return F().potionUsed?'Spare: +2 gold':`Heals ${healAmt(c)}`;
+  }
+  if(canWeapon(c)){const s=killScore(c,true);return `−${s.dmg} HP · ${s.glory}`;}
+  const s=killScore(c,false);return `Brawl −${s.dmg} · ${s.glory}`;
+}
+function remainingToResolve(){const f=F();return f.draw.length?Math.max(0,f.room.length-carry()):f.room.length;}
+function actionsHTML(){
+  const f=F();const r=f.room.find(x=>x.c.id===S.sel);
+  if(!r) return `<div class="hint">Choose a card to resolve. ${remainingToResolve()} more to go in this room${f.draw.length?'; the last one carries over':''}.</div>`;
+  const c=r.c;let out='';
+  if(isMon(c)){
+    if(f.weapon){
+      if(canWeapon(c)){const s=killScore(c,true);const fatal=s.dmg>=S.hp;
+        out+=`<button class="btn primary ${fatal?'fatal':''}" data-act="fight"><b>Fight with ♦${wPow()}${fatal?' (fatal)':''}</b><small>Take ${s.dmg} · ${s.valor} × ${s.fury} = ${s.glory} Glory${s.dbl?' (×2 Duelist)':''}</small></button>`;}
+      else out+=`<button class="btn" disabled><b>Weapon too worn</b><small>Last kill was ${f.weapon.last}; this is ${monVal(c)}</small></button>`;
+    }
+    const s=killScore(c,false);const fatal=s.dmg>=S.hp;
+    out+=`<button class="btn ${!f.weapon||!canWeapon(c)?'primary':''} ${fatal?'fatal':''}" data-act="brawl"><b>Brawl${fatal?' (fatal)':''}</b><small>Take ${s.dmg} · ${s.valor} × ${s.fury} = ${s.glory} Glory · chain kept</small></button>`;
+  } else if(c.suit==='D'){
+    out+=`<button class="btn primary" data-act="equip"><b>Equip ♦${c.v+S.sigils.D}</b><small>${f.weapon?`Replaces ♦${f.weapon.card.v} and resets chain ×${1+f.weapon.chain}`:'Your first weapon this floor'}${c.serr?' · Serrated: starts ×2':''}</small></button>`;
+  } else {
+    const sub=has('blood')?'Blood Price: +2 Fury this floor':f.potionUsed?'Already healed this room: sell for 2 gold':`Heal ${Math.min(healAmt(c),S.maxHp-S.hp)} HP`;
+    out+=`<button class="btn primary" data-act="drink"><b>Drink ♥${c.v}</b><small>${sub}</small></button>`;
+  }
+  out+=`<button class="btn" data-act="desel"><b>Cancel</b><small>Pick another card</small></button>`;
+  return out;
+}
+function relicsHTML(sell){
+  if(!S.relics.length) return `<div style="color:var(--muted);font-size:14px">No relics yet. Buy them in the shop between floors (${MAX_RELICS} slots).</div>`;
+  return `<div class="relics">${S.relics.map(k=>`<div class="relic"><b>${RELICS[k].name}</b><span>${RELICS[k].desc}</span>${sell?`<div><button class="btn" style="margin-top:6px;padding:4px 10px" data-act="sell" data-arg="${k}"><small>Sell for ${Math.floor(RELICS[k].cost/2)}</small></button></div>`:''}</div>`).join('')}</div>`;
+}
+function rulesHTML(){return `<details class="rules"><summary>How to play</summary><ul>
+  <li>♠♣ are monsters, ♦ are weapons, ♥ are potions. Each room deals ${roomSize()} cards. Resolve all but ${carry()}; the last one carries into the next room.</li>
+  <li>Fighting with a weapon: you take (monster − weapon) damage. After a kill, the weapon can only hit monsters below its last kill.</li>
+  <li><b>Glory = Valor × Fury.</b> Valor is the monster's value. Fury is 1 + your weapon's chain, so long descending chains score big.</li>
+  <li>Brawling takes full damage and scores ×1, but keeps your chain intact.</li>
+  <li>Only one potion heals per room. Extras sell for 2 gold.</li>
+  <li>You can flee an untouched room (cards go to the bottom), but not twice in a row.</li>
+  <li>Reach the Glory target to clear the floor. HP carries through a Depth: you heal half your missing HP between floors and fully after the Lair.</li>
+  <li>Keys: 1–5 pick a card, Enter does the highlighted action, B brawls, F flees, Esc cancels.</li>
+</ul></details>`;}
+
+function playHTML(){
+  const f=F();const [canF,fwhy]=fleeState();
+  const cards=f.room.map(r=>r.hidden?backHTML(r.c.id):cardHTML(r.c,{button:true,sel:S.sel===r.c.id,tip:tipFor(r.c),attrs:`data-act="sel" data-arg="${r.c.id}"`})).join('');
+  return `${topBar()}
+  <div class="table">${railHTML()}
+    <section class="room">
+      <div class="roomhead"><h2>Room ${f.roomNo}</h2>
+        <button class="btn" data-act="flee" ${canF?'':'disabled'}><b>Flee the room</b><small>${fwhy}</small></button></div>
+      <div class="cards">${cards}</div>
+      <div class="actions">${actionsHTML()}</div>
+      <div class="fx" id="fx"></div>
+    </section>
+  </div>
+  <div class="ledger">
+    <div class="panel"><div class="label" style="margin-bottom:8px">Relics ${S.relics.length}/${MAX_RELICS}</div>${relicsHTML(false)}
+      <div style="margin-top:14px">${rulesHTML()}</div></div>
+    <div class="panel"><div class="label" style="margin-bottom:8px">Ledger</div><div class="log">${S.log.map(l=>`<div>${l}</div>`).join('')}</div></div>
+  </div>`;
+}
+function titleHTML(){
+  const b=getBest();
+  return `<div class="screen">
+    <div class="label">A Scoundrel roguelike</div>
+    <h1>Underdeck</h1>
+    <p>Crawl eight depths of a dungeon built from a deck of cards. Kill monsters in falling order to build weapon chains, because Glory is Valor × Fury and Fury grows with every kill your weapon makes. Clear each floor's Glory target, then spend your gold on relics that bend the rules.</p>
+    ${rulesHTML().replace('<details class="rules">','<details class="rules" open>')}
+    ${b?`<p style="color:var(--muted)">Best run: reached Depth ${b.depth} ${FLOORS[b.fi]} with ${b.glory} total Glory.</p>`:''}
+    <div><button class="btn primary center" data-act="new" style="padding:12px 26px"><b style="font-size:18px">Begin the descent</b></button></div>
+  </div>`;
+}
+function clearedHTML(){
+  const s=S.summary;const next=S.fi===2?{d:S.depth+1,fi:0}:{d:S.depth,fi:S.fi+1};
+  return `<div class="screen">
+    <div class="label">Depth ${S.depth}</div><h2>${FLOORS[S.fi]} cleared</h2>
+    <p>${s.glory} Glory against a target of ${s.target}${s.overkill>0?` (${s.overkill} over)`:''}.${S.fi===2?' Your wounds close: HP restored to full.':` You patch up half your wounds: HP ${S.hp}/${S.maxHp}.`}</p>
+    <div class="panel rewards">${s.lines.map(l=>`<div class="stat"><span>${l[0]}</span><span class="num">+${l[1]}</span></div>`).join('')}
+      <div class="stat"><span><b>Gold earned</b></span><span class="num" style="color:var(--brass)">+${s.total}</span></div></div>
+    <p style="color:var(--muted)">Next: Depth ${next.d} ${FLOORS[next.fi]}, target ${target(next.d,next.fi)} Glory.</p>
+    <div><button class="btn primary center" data-act="shop" style="padding:12px 26px"><b>Enter the shop</b></button></div>
+  </div>`;
+}
+function shopHTML(){
+  const sh=S.shop;const next=S.fi===2?{d:S.depth+1,fi:0}:{d:S.depth,fi:S.fi+1};
+  const nb=BOSSES[S.bosses[next.d-1]];
+  const full=S.relics.length>=MAX_RELICS;
+  return `<div class="top"><div class="where"><div class="label">Between floors</div><h1>The Fence's Stall</h1>
+      <div class="sub">HP ${S.hp}/${S.maxHp} · Deck ${S.deck.length} cards · Sigils ${['S','C','D','H'].map(k=>`${SYM[k]}${S.sigils[k]}`).join(' ')}</div></div>
+    <div><div class="label">Gold</div><div class="coins num">${S.gold}</div></div></div>
+  <div class="section-h"><h2>Relics</h2><span class="label">${S.relics.length}/${MAX_RELICS} slots</span></div>
+  <div class="shopgrid">${sh.relics.map((o,i)=>{const r=RELICS[o.k];return `<div class="offer relicoffer ${o.sold?'sold':''}"><h3>${r.name}</h3><p>${r.desc}</p>
+    <button class="btn ${S.gold>=r.cost&&!full&&!o.sold?'primary':''}" data-act="buyr" data-arg="${i}" ${o.sold||S.gold<r.cost||full?'disabled':''}><b>${o.sold?'Sold':full?'Slots full':`Buy · ${r.cost}g`}</b></button></div>`;}).join('')||'<p style="color:var(--muted)">You own every relic.</p>'}</div>
+  <div class="section-h"><h2>Goods</h2><button class="btn" data-act="reroll" ${S.gold<sh.reroll?'disabled':''}><b>Reroll stock · ${sh.reroll}g</b></button></div>
+  <div class="shopgrid">${sh.goods.map((g,i)=>`<div class="offer ${g.sold?'sold':''}"><h3>${g.name}</h3><p>${g.desc}</p>
+    <button class="btn ${S.gold>=g.cost&&!g.sold?'primary':''}" data-act="buyg" data-arg="${i}" ${g.sold||S.gold<g.cost?'disabled':''}><b>${g.sold?'Sold':`Buy · ${g.cost}g`}</b></button></div>`).join('')}</div>
+  <div class="section-h"><h2>Your relics</h2><button class="btn" data-act="deck"><b>View deck</b></button></div>
+  ${relicsHTML(true)}
+  <div class="panel" style="margin-top:24px;display:flex;flex-wrap:wrap;gap:14px;justify-content:space-between;align-items:center">
+    <div><div class="label">Next floor</div><div style="font-family:var(--f-display);font-size:22px">Depth ${next.d} ${FLOORS[next.fi]} · ${target(next.d,next.fi)} Glory</div>
+    ${next.fi===2?`<div class="boss" style="margin-top:6px"><b>${nb.name}</b> ${nb.desc}</div>`:`<div style="color:var(--muted);font-size:14px">Lair boss this depth: ${nb.name}</div>`}</div>
+    <button class="btn primary center" data-act="leave" style="padding:12px 26px"><b>Descend</b></button>
+  </div>`;
+}
+function endHTML(win){
+  return `<div class="screen">
+    <div class="label">${win?'Victory':'Run over'}</div>
+    <h1>${win?'You reached the bottom':'Fallen'}</h1>
+    <p>${win?`All ${DEPTHS} depths cleared.`:`${S.cause} on Depth ${S.depth}, ${FLOORS[S.fi]}.`} Total Glory: <b class="num">${S.totalGlory}</b>.</p>
+    ${S.relics.length?`<div><div class="label" style="margin-bottom:8px">Relics carried</div>${relicsHTML(false)}</div>`:''}
+    <div><button class="btn primary center" data-act="new" style="padding:12px 26px"><b>Start a new run</b></button></div>
+  </div>`;
+}
+function modalHTML(){
+  if(S.picker){const p=PICK[S.picker.k];
+    return `<div class="modal"><div class="box"><h2>${p.title}</h2><div class="grid">${sortedDeck().map(c=>cardHTML(c,{mini:true,button:true,dim:!p.ok(c),attrs:`data-act="pick" data-arg="${c.id}" ${p.ok(c)?'':'disabled'}`})).join('')}</div>
+      <button class="btn" data-act="cancelpick"><b>Cancel</b></button></div></div>`;}
+  if(S.modal==='deck'){
+    return `<div class="modal"><div class="box"><h2>Your deck · ${S.deck.length} cards</h2>
+      <p style="color:var(--muted);margin:6px 0 0">${['S','C','D','H'].map(k=>`${SYM[k]} ${S.deck.filter(c=>c.suit===k).length}`).join(' · ')}</p>
+      <div class="grid">${sortedDeck().map(c=>cardHTML(c,{mini:true})).join('')}</div>
+      <button class="btn" data-act="closemodal"><b>Close</b></button></div></div>`;}
+  return '';
+}
+const sortedDeck=()=>[...S.deck].sort((a,b)=>'SCDH'.indexOf(a.suit)-'SCDH'.indexOf(b.suit)||b.v-a.v);
+
+function render(){
+  if(!S){$app.innerHTML=titleHTML();return;}
+  let h='';
+  if(S.screen==='play') h=playHTML();
+  else if(S.screen==='cleared') h=clearedHTML();
+  else if(S.screen==='shop') h=shopHTML();
+  else if(S.screen==='dead') h=endHTML(false);
+  else if(S.screen==='victory') h=endHTML(true);
+  $app.innerHTML=h+modalHTML();
+  const layer=document.getElementById('fx');
+  if(layer&&S.fx.length){S.fx.forEach((e,i)=>{const d=document.createElement('div');d.className='pop '+e.kind;d.textContent=e.text;
+    d.style.left=(20+i*18+Math.random()*30)+'%';d.style.top=(30+i*8)+'px';layer.appendChild(d);setTimeout(()=>d.remove(),1400);});}
+  S.fx=[];
+}
+
+/* ---------------- input ---------------- */
+function act(a,arg){
+  if(a==='new'){newRun();return render();}
+  if(!S) return;
+  switch(a){
+    case 'sel':{const r=F().room.find(x=>x.c.id===+arg);if(!r)break;
+      if(r.hidden){resolve(r.c.id);break;}
+      S.sel=S.sel===+arg?null:+arg;break;}
+    case 'desel':S.sel=null;break;
+    case 'fight':resolve(S.sel,'weapon');break;
+    case 'brawl':resolve(S.sel,'brawl');break;
+    case 'equip':case 'drink':resolve(S.sel);break;
+    case 'flee':flee();break;
+    case 'shop':makeShop();break;
+    case 'buyr':buyRelic(+arg);break;
+    case 'buyg':buyGood(+arg);break;
+    case 'sell':sellRelic(arg);break;
+    case 'reroll':reroll();break;
+    case 'leave':leaveShop();break;
+    case 'pick':pick(+arg);break;
+    case 'cancelpick':S.picker=null;break;
+    case 'deck':S.modal='deck';break;
+    case 'closemodal':S.modal=null;break;
+  }
+  render();
+}
+$app.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(!t||t.disabled)return;act(t.dataset.act,t.dataset.arg);});
+document.addEventListener('keydown',e=>{
+  if(!S||e.metaKey||e.ctrlKey||e.altKey)return;
+  if(e.key==='Escape'){if(S.picker)S.picker=null;else if(S.modal)S.modal=null;else S.sel=null;return render();}
+  if(S.screen!=='play'||S.picker||S.modal)return;
+  const n=parseInt(e.key,10);
+  if(n>=1&&n<=5){const r=F().room[n-1];if(r)act('sel',r.c.id);return;}
+  if(e.key==='f'||e.key==='F'){act('flee');return;}
+  if((e.key==='b'||e.key==='B')&&S.sel&&isMon(F().room.find(x=>x.c.id===S.sel)?.c||{})){act('brawl');return;}
+  if(e.key==='Enter'&&S.sel){const p=$app.querySelector('.actions .btn.primary');if(p){e.preventDefault();p.click();}}
+});
+
+/* ---------------- boot ---------------- */
+function start(data){
+  if(data&&data.S){S=data.S;uid=1+Math.max(0,...S.deck.map(c=>c.id));S.fx=[];}
+  render();
+}
+try{window.claude?.hot?.snapshot?.(()=>({S}));}catch(e){}
+window.claude?.hot?.ready?window.claude.hot.ready(start):start(window.claude?.hot?.data??{});
+</script>

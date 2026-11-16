@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Underdeck art gallery</title>
+<style>
+  :root { --ink: #1d1b16; --paper: #ece3cd; --blood: #b8322a; --bg: #12110e; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--paper); font: 14px/1.4 system-ui, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 8px; }
+  h2 { font-size: 15px; margin: 28px 0 8px; border-bottom: 1px solid #333; padding-bottom: 4px; }
+  .item { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid #2a2823; }
+  .label { width: 130px; font-size: 13px; color: #bfb59c; }
+  .card { background: var(--paper); border-radius: 6px; padding: 6px; }
+  .dark { padding: 6px; }
+  .s60 .art { width: 60px; height: 60px; }
+  .s100 .art { width: 100px; height: 100px; }
+  .s180 .art { width: 180px; height: 180px; }
+  .r22 .art { width: 22px; height: 22px; }
+  .r40 .art { width: 40px; height: 40px; }
+  .r96 .art { width: 96px; height: 96px; }
+</style>
+</head>
+<body>
+<h1>Underdeck art gallery</h1>
+<div id="app"></div>
+<script type="module" src="/src/gallery.ts"></script>
+</body>
+</html>
