@@ -37,8 +37,8 @@ function tipFor(c: Card): string {
     if (has(G, 'blood')) return '+2 Fury';
     return G.f.potionUsed ? 'Sell · 2g' : `Heal ${healAmount(G, c)}`;
   }
-  if (canWeapon(G, c)) { const s = killScore(G, c, true); return `<b>−${s.dmg}</b> · ${s.glory}★`; }
-  const s = killScore(G, c, false); return `<b>−${s.dmg}</b> · ${s.glory}★ bare`;
+  if (canWeapon(G, c)) { const s = killScore(G, c, true); return `<span class="dmg">−${s.dmg}</span> · <span class="gl">+${s.glory}</span>`; }
+  const s = killScore(G, c, false); return `<span class="dmg">−${s.dmg}</span> · <span class="gl">+${s.glory}</span> bare`;
 }
 
 interface CardOpts { inRoom?: boolean; mini?: boolean; button?: string; dim?: boolean; selected?: boolean; i?: number }
@@ -49,7 +49,7 @@ function cardHTML(c: Card, o: CardOpts = {}) {
   const pack = o.inRoom && G && c.suit === 'C' ? packBonus(G, c) : 0;
   const badges = [
     c.risen ? '<span class="badge risen">Risen</span>' : '',
-    pack ? `<span class="badge pack">Pack +${pack}</span>` : '',
+    pack ? `<span class="badge pack"><span class="w">Pack </span>+${pack}</span>` : '',
     c.gild ? '<span class="badge gild">Gilded</span>' : '',
     c.serr ? '<span class="badge serr">Serrated</span>' : '',
   ].join('');
@@ -67,6 +67,13 @@ const backHTML = (c: Card, i: number) => `<button class="card back" data-id="${c
   <span class="back-eye"></span><span class="c-name">Blind</span></button>`;
 
 /* ---------------- HUD ---------------- */
+/** Character-sheet tick boxes: filled for HP you have, red strike for HP lost. */
+function pipsHTML(hp: number, max: number, lost: number) {
+  let out = '';
+  for (let i = 0; i < max; i++) out += `<i class="${i < hp ? 'on' : i < hp + lost ? 'lost' : ''}"></i>`;
+  return `<div class="pips" role="img" aria-label="${hp} of ${max} health">${out}</div>`;
+}
+
 function hud() {
   const g = G!, f = g.f;
   const pct = Math.min(100, (f.glory / f.target) * 100);
@@ -77,7 +84,7 @@ function hud() {
     </div>
     <div class="hud-glory ${f.cleared ? 'done' : ''}">
       <div class="row"><span class="label">Glory</span><span class="num"><b id="glory-num">${f.glory}</b> / ${f.target}</span></div>
-      <div class="track"><i style="width:${pct}%"></i></div>
+      <div class="ruler" role="img" aria-label="${f.glory} of ${f.target} Glory"><i style="width:${pct}%"></i></div>
     </div>
     <div class="hud-gold"><span class="label">Gold</span><b class="num" id="gold-num">${g.gold}</b></div>
   </header>
@@ -87,7 +94,7 @@ function hud() {
 
 function statusBar() {
   const g = G!, f = g.f, w = f.weapon;
-  const hpPct = (g.hp / g.maxHp) * 100;
+  const lostThisFloor = Math.max(0, g.maxHp - g.hp);
   const fb = f.bonusFury + (has(g, 'trophy') ? Math.floor(f.kills / 4) : 0);
   const weapon = w
     ? `<div class="wslot" id="wslot">${cardHTML(w.card, { mini: true })}
@@ -98,12 +105,12 @@ function statusBar() {
         <div class="wmeta"><span class="label">Bare hands</span><b class="chain num" id="chain">×${1 + fb}</b><small>Full damage</small></div></div>`;
   return `<section class="status">
     <div class="hp" id="hp"><div class="row"><span class="label">Health</span><span class="num"><b id="hp-num">${g.hp}</b>/${g.maxHp}</span></div>
-      <div class="track hp-track"><i style="width:${hpPct}%"></i></div></div>
+      ${pipsHTML(g.hp, g.maxHp, lostThisFloor)}</div>
     ${weapon}
     <div class="minis">
       <div><span class="label">Dungeon</span><b class="num">${f.draw.length + f.risenQueue.length}</b></div>
       <div><span class="label">Flees</span><b class="num">${f.fleesLeft}</b></div>
-      <div><span class="label">Potion</span><b>${has(g, 'blood') ? '—' : f.potionUsed ? 'Used' : 'Ready'}</b></div>
+      <div><span class="label">Potion</span><b>${has(g, 'blood') ? 'Off' : f.potionUsed ? 'Used' : 'Ready'}</b></div>
     </div>
   </section>`;
 }
@@ -165,14 +172,14 @@ function playHTML() {
   const lairBoss = BOSSES[g.bosses[g.depth - 1]];
   return `${hud()}${statusBar()}
   <section class="room">
-    <div class="roomhead"><div><h2>Room ${f.roomNo}</h2><span class="muted">${f.boss ? BOSSES[f.boss].desc : `Lair ahead: ${lairBoss.name}`}</span></div>
+    <div class="roomhead"><div><h2>Room <span class="n">${f.roomNo}</span></h2><span class="muted">${f.boss ? BOSSES[f.boss].desc : `Lair ahead: ${lairBoss.name}`}</span></div>
       <button class="btn small" data-act="flee" ${canF ? '' : 'disabled'}><b>Flee</b><small>${why}</small></button></div>
-    <div class="cards" style="--n:${Math.max(4, roomSize(g))}">${cards}</div>
+    <div class="map"><div class="map-floor" data-room="R${f.roomNo}"><div class="cards" style="--n:${Math.max(4, roomSize(g))}">${cards}</div></div></div>
   </section>
   <section class="detail ${sel ? 'has-sel' : ''}" aria-live="polite">${actionsHTML()}</section>
   <section class="ledger">
-    <div class="panel"><div class="label">Relics ${g.relics.length}/${MAX_RELICS}</div>${relicList(false)}${rulesHTML()}</div>
-    <div class="panel"><div class="label">Ledger</div><div class="log">${g.log.map(l => `<div>${esc(l)}</div>`).join('')}</div>
+    <div><h3>Relics <span class="muted">${g.relics.length} of ${MAX_RELICS}</span></h3>${relicList(false)}${rulesHTML()}</div>
+    <div><h3>Ledger</h3><div class="log">${g.log.map(l => `<div>${esc(l)}</div>`).join('')}</div>
       ${seedBox()}</div>
   </section>
   ${!g.bossSeen && f.boss ? bossIntro() : ''}`;
@@ -200,8 +207,8 @@ function titleHTML() {
   const fan = [monsterArt('S', 14), monsterArt('C', 13), weaponArt(10), monsterArt('S', 12), potionArt(9)];
   return `<div class="screen title">
     <div class="fan">${fan.map((a, i) => `<div class="card fan-card" style="--k:${i - 2}"><span class="c-art">${a}</span></div>`).join('')}</div>
-    <div class="label">A Scoundrel roguelike</div>
-    <h1 class="logo">Underdeck</h1>
+    <h1 class="logo"><span class="rubric">U</span>nderdeck</h1>
+    <p class="tagline">A Scoundrel roguelike, played on the map.</p>
     <p>Crawl eight depths of a dungeon built from a deck of cards. Kill monsters in falling order to build weapon chains: Glory is Valor × Fury, and Fury grows with every kill your weapon makes.</p>
     <div class="menu">
       ${sharedSeed ? `<button class="btn primary" data-act="seedrun" data-arg="${sharedSeed}"><b>Play shared seed ${sharedSeed}</b><small>Someone sent you this dungeon</small></button>` : ''}
@@ -221,7 +228,7 @@ function clearedHTML() {
   return `<div class="screen">
     <div class="label">Depth ${g.depth}</div><h2>${FLOORS[g.fi]} cleared</h2>
     <p>${s.glory} Glory against a target of ${s.target}.${g.fi === 2 ? ' Your wounds close: HP restored to full.' : ` You patch up half your wounds: HP ${g.hp}/${g.maxHp}.`}</p>
-    <div class="panel rewards">${s.lines.map(l => `<div class="stat"><span>${l[0]}</span><span class="num">+${l[1]}</span></div>`).join('')}
+    <div class="rewards">${s.lines.map(l => `<div class="stat"><span>${l[0]}</span><span class="num">+${l[1]}</span></div>`).join('')}
       <div class="stat total"><span>Gold earned</span><span class="num">+${s.total}</span></div></div>
     <p class="muted">Next: Depth ${nx.d} ${FLOORS[nx.fi]}, target ${floorTarget(nx.d, nx.fi)} Glory.</p>
     <div><button class="btn primary center" data-act="shop"><b>Enter the shop</b></button></div>
@@ -249,7 +256,7 @@ function shopHTML() {
   }).join('')}</div>
   <div class="section-h"><h2>Your relics</h2><button class="btn small" data-act="deck"><b>View deck</b></button></div>
   ${relicList(true)}
-  <div class="panel next">
+  <div class="next">
     <div><div class="label">Next floor</div><h3>Depth ${nx.d} ${FLOORS[nx.fi]} · ${floorTarget(nx.d, nx.fi)} Glory</h3>
       <div class="muted">${nx.fi === 2 ? `<b class="bad">${nb.name}</b>: ${nb.desc}` : `Lair boss this depth: ${nb.name}`}</div></div>
     <button class="btn primary center" data-act="leaveshop"><b>Descend</b></button>
@@ -259,8 +266,8 @@ function shopHTML() {
 function endHTML(win: boolean) {
   const g = G!;
   return `<div class="screen end">
-    <div class="label">${win ? 'Victory' : 'Run over'}</div>
-    <h1 class="logo">${win ? 'You reached the bottom' : 'Fallen'}</h1>
+    <p class="tagline">${win ? 'Victory' : 'Run over'}</p>
+    <h1 class="logo">${win ? 'You reached the bottom' : '<span class="rubric">F</span>allen'}</h1>
     <p>${win ? `All ${DEPTHS} depths cleared.` : `${esc(g.cause)} on Depth ${g.depth}, ${FLOORS[g.fi]}.`} Total Glory: <b class="num">${g.totalGlory}</b>.</p>
     ${g.relics.length ? `<div><div class="label">Relics carried</div>${relicList(false)}</div>` : ''}
     <div class="menu">
@@ -426,7 +433,7 @@ function postAnimate(ev: Ev[], rect: DOMRect | undefined, before: { glory: numbe
   countUp(q('#hp-num'), before.hp, G.hp);
   const chain = G.f.weapon?.chain ?? -1;
   if (chain > before.chain && chain > 0) void pulse(q('#chain'), 1.5);
-  if (G.hp < before.hp) void anim(q('.hp-track i'), [{ filter: 'brightness(2.4)' }, { filter: 'none' }], { duration: 500 });
+  if (G.hp < before.hp) void shake(q('.pips'), 4);
 }
 
 async function doFlee() {
@@ -500,6 +507,8 @@ function act(a: string, arg?: string) {
 
 export function boot() {
   document.body.insertAdjacentHTML('afterbegin', artDefs());
+  // ?still turns animation off (screenshots, slow devices).
+  if (new URLSearchParams(location.search).has('still')) document.documentElement.dataset.motion = 'off';
   // Dev-only test hook (stripped from production builds).
   if (import.meta.env.DEV) Object.assign(window, { __ud: { get G() { return G; }, render } });
   const m = location.hash.match(/^#seed-([A-Za-z0-9]+)$/);
