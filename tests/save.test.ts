@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { newGame } from '../src/game';
+import { chooseStarter, newGame, starterChoices } from '../src/game';
 import { loadGame, loadMotion, saveGame, saveMotion } from '../src/save';
 
 let stored: Map<string, string>;
@@ -19,6 +19,31 @@ describe('compatible saves and presentation settings', () => {
     saveGame(legacy);
     expect(loadGame()?.screen).toBe('play');
     expect(loadGame()?.relics).toEqual([]);
+  });
+  it('loads an actual 44-card legacy save and persists the expanded deck without changing the current floor', () => {
+    const legacy = newGame('OLD44');
+    legacy.deck = legacy.deck.filter(c => c.id <= 44); legacy.uid = 45;
+    delete legacy.rulesVersion; delete legacy.f.ally; delete legacy.f.ward;
+    legacy.f.room = legacy.f.room.filter(s => s.c.id <= 44);
+    legacy.f.draw = legacy.f.draw.filter(c => c.id <= 44);
+    const before = JSON.stringify({ room: legacy.f.room, draw: legacy.f.draw, hp: legacy.hp, screen: legacy.screen });
+    saveGame(legacy);
+    const resumed = loadGame()!;
+    expect(resumed.deck).toHaveLength(52);
+    expect(JSON.stringify({ room: resumed.f.room, draw: resumed.f.draw, hp: resumed.hp, screen: resumed.screen })).toBe(before);
+    saveGame(resumed);
+    expect(loadGame()?.deck).toHaveLength(52);
+    expect(new Set(loadGame()?.deck.map(c => c.id)).size).toBe(52);
+  });
+  it('upgrades a legacy pending starter into the new dungeon exactly once', () => {
+    const pending = newGame('OLDSTART', false, true);
+    pending.deck = pending.deck.filter(c => c.id <= 44); pending.uid = 45; delete pending.rulesVersion;
+    saveGame(pending);
+    const resumed = loadGame()!;
+    expect(chooseStarter(resumed, starterChoices(resumed.seed)[0])).toBe(true);
+    expect(resumed.f.room.length + resumed.f.draw.length).toBe(52);
+    expect(resumed.relics).toHaveLength(1);
+    saveGame(resumed); expect(loadGame()?.deck).toHaveLength(52);
   });
   it('resumes a pending starter choice without changing dungeon state', () => {
     const pending = newGame('PENDING', false, true);

@@ -872,3 +872,147 @@ const RELICS: Record<RelicKey, string> = {
 export function relicIcon(key: RelicKey): string {
   return svg(`relic relic-${key}`, RELICS[key], '0 0 24 24');
 }
+
+// ---------------------------------------------------------------- red-suit court allies
+// Human faces and broad equipment silhouettes distinguish allies from monsters.
+// Keep rank corner (x0–26/y0–27) and badge corner (x70–100/y0–14) clear.
+
+function courtFace(cx = 51, cy = 31, beard = false): string {
+  const face = P('pi', `M${cx - 10} ${cy - 8} Q${cx} ${cy - 14} ${cx + 10} ${cy - 8} L${cx + 8} ${cy + 6} Q${cx} ${cy + 14} ${cx - 8} ${cy + 6}Z`, ' stroke-width="1.6"');
+  const eyes = g('a-eyes', ln(`M${cx - 6} ${cy} h3 M${cx + 3} ${cy} h3`, 1.9));
+  return face + eyes + ln(`M${cx} ${cy + 1} l-1 4 h3`, 1) +
+    (beard ? P('ink', `M${cx - 8} ${cy + 5} Q${cx} ${cy + 10} ${cx + 8} ${cy + 5} L${cx + 7} ${cy + 17} L${cx} ${cy + 22} L${cx - 7} ${cy + 17}Z`) + cut(`M${cx - 3} ${cy + 11} v6 M${cx + 2} ${cy + 10} v8`, 1)
+      : ln(`M${cx - 3} ${cy + 8} q3 1 6 0`, 1));
+}
+
+function diamondJack(): string {
+  const legs = P('ink', 'M40 69 H61 L65 91 L72 94 H55 L51 75 L47 94 H30 L37 90Z') + cut('M43 74 L41 89 M57 75 L60 88', 1.5);
+  const body = P('ink', 'M35 42 Q49 35 64 42 L69 68 L60 76 H38 L31 67Z') +
+    cut('M35 47 Q49 55 64 47 M35 61 H64 M39 69 H60', 1.6) +
+    P('paper', 'M49 51 L55 58 L49 65 L43 58Z');
+  const helm = P('ink', 'M38 24 Q39 13 52 13 Q65 14 65 28 L61 43 H40Z') +
+    P('paper', 'M42 26 Q50 23 61 26 L59 38 H43Z') + ln('M44 29 H58 M51 28 V37', 2) +
+    cut('M41 20 Q50 16 60 21 M40 40 H59', 1.4) + P('ink', 'M50 14 Q49 4 58 6 L61 11 L54 16Z');
+  const shield = P('pi', 'M18 48 L31 43 L43 48 L41 71 Q32 83 29 83 Q19 73 18 48Z', ' stroke-width="2"') +
+    P('ink', 'M22 51 L31 47 L39 51 L37 69 L30 77 L24 69Z') + P('paper', 'M30 53 L35 61 L30 69 L26 61Z') +
+    cut('M23 53 V66', 1.2);
+  const spear = g('a-limb', ln('M78 33 L73 93', 3) + P('pi', 'M78 20 L83 32 L77 38 L73 32Z', ' stroke-width="1.5"') +
+    ln('M77 22 V32', 1) + ln('M65 47 L73 57 L76 50', 6) + C('pi', 76, 50, 3.3, ' stroke-width="1.3"'));
+  return svg('art-ally art-ally-dj', shadow(49, 32) + g('a-body', legs + body + helm + spear + shield));
+}
+
+function diamondQueen(): string {
+  const cloak = P('ink', 'M37 40 Q30 44 26 60 L20 89 L34 84 L43 94 L68 91 L64 45Z') +
+    P('hatch', 'M27 62 L20 89 L34 84 L42 92 L43 55Z') + cut('M35 49 L29 76 M61 54 L65 83', 1.5);
+  const boots = P('ink', 'M43 72 H52 L48 91 L53 94 H35 L40 88Z M53 71 H61 L65 88 L72 93 H57 L53 82Z') + cut('M43 80 L41 88 M59 78 L61 88', 1.3);
+  const torso = P('pi', 'M42 42 H60 L65 66 L58 75 L40 70 L37 58Z', ' stroke-width="1.7"') +
+    P('ink', 'M39 49 L61 47 L63 54 L40 58Z M39 64 L64 61 L64 67 L40 70Z') +
+    C('acc', 52, 65, 2.5) + ln('M48 44 L51 61 M58 55 L59 59', 1.2);
+  const head = P('ink', 'M39 24 Q41 14 52 15 Q65 16 65 29 L67 51 L58 44 L42 44 L35 48Z') + courtFace(52, 30) +
+    P('ink', 'M38 26 L28 23 L39 18 L45 12 L60 18 L71 23 L61 28 L53 23Z') +
+    P('pi', 'M63 18 Q68 10 75 11 Q72 18 64 22Z', ' stroke-width="1.2"') + ln('M65 20 L72 13', 1.1);
+  const rapier = g('a-limb', ln('M63 46 L69 59 L77 54', 5.5) +
+    P('pi', 'M78 54 L89 24 L90 21 L91 25 L81 56Z', ' stroke-width="1.3"') +
+    E('line', 79, 58, 5.3, 4, ' stroke-width="1.8" transform="rotate(-25 79 58)"') +
+    C('pi', 76, 59, 3, ' stroke-width="1.4"') + ln('M76 62 L74 68', 2.5));
+  return svg('art-ally art-ally-dq', shadow(49, 31) + g('a-body', cloak + boots + torso + head + rapier));
+}
+
+function diamondKing(): string {
+  const cape = P('ink', 'M33 40 L66 40 Q78 55 81 91 L63 87 L50 96 L35 88 L19 92 Q24 55 33 40Z') +
+    cut('M29 54 L23 83 M71 54 L77 83', 1.5);
+  const legs = P('pi', 'M37 70 H49 L47 92 H31 L36 87Z M52 70 H63 L66 87 L71 92 H54Z', ' stroke-width="1.7"') +
+    P('ink', 'M35 84 H47 V92 H30Z M54 84 H65 L72 93 H54Z');
+  const armor = P('pi', 'M34 42 L48 39 L64 42 L71 53 L62 58 L63 73 H36 L37 58 L27 53Z', ' stroke-width="1.8"') +
+    P('ink', 'M39 48 L50 43 L61 48 L58 64 L50 70 L42 64Z') + P('paper', 'M50 48 L56 56 L50 64 L44 56Z') +
+    ln('M36 68 H63 M31 49 L39 53 M62 53 L68 49', 1.3);
+  const head = courtFace(50, 29, true) +
+    P('ink', 'M37 23 L34 12 L43 17 L49 8 L55 17 L65 12 L62 24Z') +
+    cut('M39 20 H61', 1.4) + C('acc', 49, 17, 2.3);
+  const sword = g('a-limb', ln('M28 52 L28 65 L38 67', 7) + ln('M69 52 L70 65 L60 67', 7) +
+    P('pi', 'M49 58 L54 67 L53 91 L49 97 L45 91 L45 67Z', ' stroke-width="1.7"') +
+    ln('M49 70 V89', 1) + ln('M38 66 H61', 3) + C('pi', 43, 64, 3, ' stroke-width="1.3"') + C('pi', 56, 64, 3, ' stroke-width="1.3"'));
+  return svg('art-ally art-ally-dk', shadow(49, 33) + g('a-body', cape + legs + armor + head + sword));
+}
+
+function heartJack(): string {
+  const robe = P('ink', 'M39 42 Q29 45 28 58 L23 91 Q49 100 72 91 L69 55 Q65 44 60 42Z') +
+    cut('M38 57 L32 88 M48 52 V91 M61 57 L66 87', 1.6) +
+    P('paper', 'M37 45 L45 40 L52 48 L58 41 L64 46 L57 61 L46 59Z');
+  const hood = P('ink', 'M33 33 Q32 13 49 12 Q69 14 69 36 L61 48 H39Z') +
+    P('pi', 'M40 25 Q50 18 61 25 L59 39 Q50 47 42 38Z', ' stroke-width="1.5"') +
+    ln('M43 29 H47 M54 29 H58 M50 31 L49 35 H52 M46 39 H54', 1.3) + cut('M38 24 Q39 17 46 16 M63 20 L65 31', 1.5);
+  const bag = P('pi', 'M25 62 H40 L44 80 L39 87 H22 L19 78Z', ' stroke-width="1.8"') +
+    P('ink', 'M22 67 H42 V74 H22Z') + P('paper', 'M30 68 H34 V73 H30Z') + ln('M24 78 H38 M26 82 H36', 1.1) +
+    ln('M35 48 L26 64', 3);
+  const care = g('a-limb', ln('M63 48 L70 60 L64 71', 6) +
+    P('pi', 'M56 66 L69 68 L67 80 L54 77Z', ' stroke-width="1.5"') +
+    ln('M58 69 L67 72 M57 72 L66 75', 1.1) + C('pi', 65, 67, 3.3, ' stroke-width="1.2"'));
+  return svg('art-ally art-ally-hj', shadow(48, 29) + g('a-body', robe + hood + bag + care));
+}
+
+function heartQueen(): string {
+  const dress = P('ink', 'M40 43 H60 L63 66 L72 92 Q50 99 27 92 L36 64Z') +
+    P('hatch', 'M38 56 L31 90 L45 93 L47 55Z') + cut('M43 58 L39 87 M56 58 L62 88 M31 91 Q50 95 68 91', 1.4);
+  const shawl = P('pi', 'M37 42 L47 38 H55 L65 43 L68 56 L57 53 L50 60 L40 53 L32 58Z', ' stroke-width="1.6"') +
+    P('ink', 'M40 45 L49 54 L59 44 L55 42 L49 48 L44 42Z') + C('acc', 50, 54, 2.5);
+  const head = P('ink', 'M37 29 Q35 14 50 12 Q64 15 65 29 L62 47 L57 43 H40Z') + courtFace(50, 29) +
+    ln('M38 27 Q34 41 40 58 M40 43 L35 47 M40 49 L35 53 M40 55 L36 59', 3.2) +
+    P('pi', 'M39 20 L38 15 L44 18 L50 12 L56 18 L62 15 L61 21Z', ' stroke-width="1.2"');
+  const staff = g('a-limb', ln('M77 29 L73 93', 3.1) +
+    P('pi', 'M77 32 Q65 24 68 20 Q80 21 77 32Z M78 33 Q88 26 89 20 Q78 19 78 33Z', ' stroke-width="1.4"') +
+    ln('M76 28 L71 20 M79 28 L85 20', 1) + ln('M64 46 L70 58 L75 54', 6) + C('pi', 75, 54, 3.1, ' stroke-width="1.2"'));
+  const herb = g('a-limb', ln('M34 48 L28 64 L39 65', 5.3) +
+    P('pi', 'M29 61 Q22 53 25 48 Q34 49 33 59 Q36 51 42 53 Q45 61 35 65Z', ' stroke-width="1.4"') + C('pi', 35, 65, 2.8, ' stroke-width="1.2"'));
+  return svg('art-ally art-ally-hq', shadow(50, 31) + g('a-body', dress + shawl + head + staff + herb));
+}
+
+function heartKing(): string {
+  const robe = P('ink', 'M33 43 Q50 37 67 43 L72 92 Q51 99 28 92 L30 62Z') +
+    cut('M36 59 L32 89 M46 64 L43 93 M58 64 L61 92 M66 60 L69 89', 1.5) +
+    P('paper', 'M37 43 L48 58 L50 85 L55 58 L65 43 L61 42 L51 52 L43 42Z') +
+    P('hatch', 'M31 70 L30 91 L41 94 L42 73Z');
+  const head = P('ink', 'M36 27 Q37 15 50 15 Q65 15 65 28 L67 44 L57 42 L40 43Z') + courtFace(51, 30, true) +
+    P('ink', 'M36 23 L33 14 L42 17 L51 8 L59 17 L67 13 L64 24Z') + cut('M39 21 H62', 1.5) + C('acc', 51, 17, 2.2);
+  const book = P('pi', 'M23 54 Q37 51 50 60 Q64 51 79 54 L76 76 Q63 73 50 81 Q37 73 25 77Z', ' stroke-width="2"') +
+    P('ink', 'M25 58 Q37 56 48 63 V77 Q36 70 27 73Z') +
+    cut('M30 61 L43 65 M30 65 L43 69 M30 69 L39 72', 1.3) +
+    ln('M54 63 Q63 59 73 59 M54 67 Q63 63 72 63 M54 71 Q62 67 71 67 M50 61 V80', 1.2);
+  const hands = g('a-limb', C('pi', 27, 70, 4, ' stroke-width="1.4"') + C('pi', 74, 70, 4, ' stroke-width="1.4"') + ln('M25 68 L28 73 M72 68 L75 73', 1));
+  return svg('art-ally art-ally-hk', shadow(50, 30) + g('a-body', robe + head + book + hands));
+}
+
+/** J/Q/K are characters; numeric red suits retain their weapon/potion art. */
+export function allyArt(suit: 'D' | 'H', rank: number): string {
+  if (suit === 'D') return rank === 11 ? diamondJack() : rank === 12 ? diamondQueen() : diamondKing();
+  return rank === 11 ? heartJack() : rank === 12 ? heartQueen() : heartKing();
+}
+
+// ---------------------------------------------------------------- the Fool (Jokers)
+
+export function jokerArt(): string {
+  const legs = P('ink', 'M41 67 H53 L50 82 L43 92 L48 95 H30 L37 86Z M53 66 H63 L62 81 L71 88 L82 87 Q82 94 72 95 L57 88 L53 79Z') +
+    cut('M44 75 L41 86 M58 75 V82 L69 91', 1.5);
+  const coat = P('ink', 'M39 41 L57 40 L67 58 L62 74 L55 69 L49 77 L43 70 L33 73 L36 56 L27 54Z') +
+    P('paper', 'M42 44 L48 47 L43 57 L38 53Z M53 53 L59 58 L54 66 L49 61Z') +
+    ln('M38 62 L61 63', 1.4) + C('pi', 48, 62, 2.6, ' stroke-width="1"');
+  const face = P('pi', 'M40 24 Q53 18 64 27 L61 40 Q51 48 42 38Z', ' stroke-width="1.5"') +
+    P('ink', 'M42 28 L52 27 L52 39 L48 42 L42 37Z') +
+    g('a-eyes', ln('M45 31 L49 31 M56 30 L60 32', 1.8)) +
+    cut('M45 31 H48', 1.4) + ln('M52 32 L51 36 L54 36 M47 39 Q53 43 58 37', 1.2);
+  const cap = P('ink', 'M36 29 Q28 23 30 16 L43 22 Q40 10 48 8 L55 20 Q62 14 70 21 L63 28 L53 24 L43 28Z') +
+    P('paper', 'M43 23 L47 13 L51 23Z') + cut('M32 20 L38 24 M58 21 L66 18', 1.3) +
+    C('pi', 29, 16, 2.6, ' stroke-width="1.2"') + C('pi', 48, 7, 2.7, ' stroke-width="1.2"') + C('pi', 71, 22, 2.6, ' stroke-width="1.2"');
+  const staff = g('a-limb', ln('M76 37 L71 81', 3) +
+    P('pi', 'M69 27 Q69 20 76 21 Q84 23 82 30 L78 37 H70Z', ' stroke-width="1.4"') +
+    C('ink', 75, 28, 2) + ln('M68 38 H80', 2) + C('pi', 68, 40, 2, ' stroke-width="1.2"') + C('pi', 80, 40, 2, ' stroke-width="1.2"') +
+    ln('M62 46 L69 57 L74 50', 5) + C('pi', 74, 50, 2.8, ' stroke-width="1.2"'));
+  const cards = g('a-limb', ln('M34 48 L24 58 L30 66', 5) +
+    P('pi', 'M14 56 L29 52 L36 73 L21 78Z', ' stroke-width="1.4"') +
+    P('pi', 'M23 56 L39 58 L36 79 L20 77Z', ' stroke-width="1.4"') +
+    P('acc', 'M29 62 L33 68 L28 73 L25 67Z') +
+    C('pi', 32, 59, 3, ' stroke-width="1.1"'));
+  const collar = P('pi', 'M35 39 L40 41 L45 39 L49 44 L54 40 L59 40 L64 36 L62 47 L55 45 L49 50 L43 45 L36 48Z', ' stroke-width="1.3"') +
+    C('acc', 49, 49, 2);
+  return svg('art-joker', shadow(51, 34) + g('a-body', legs + coat + face + cap + staff + cards + collar));
+}

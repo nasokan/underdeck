@@ -1,21 +1,25 @@
-export type Suit = 'S' | 'C' | 'D' | 'H';
+export type StandardSuit = 'S' | 'C' | 'D' | 'H';
+export type Suit = StandardSuit | 'J';
 export type BossKey = 'warden' | 'leech' | 'rust' | 'crown' | 'mimic' | 'swarm';
 export type RelicKey =
   | 'whetstone' | 'trophy' | 'cloak' | 'blood' | 'packrat' | 'duelist' | 'exec'
   | 'hoarder' | 'irongut' | 'scavenger' | 'glass' | 'bloodletter' | 'tooth';
 
-export const SYM: Record<Suit, string> = { S: '♠', C: '♣', D: '♦', H: '♥' };
+export const SYM: Record<Suit, string> = { S: '♠', C: '♣', D: '♦', H: '♥', J: '✦' };
 export const rankName = (v: number) => ({ 11: 'J', 12: 'Q', 13: 'K', 14: 'A' } as Record<number, string>)[v] ?? String(v);
 
 export const FLOORS = ['Hall', 'Vault', 'Lair'] as const;
 // Tuning knobs. Targets for Hall / Vault / Lair at Depth 1, multiplied by GROWTH each Depth.
 export const BASE_TARGETS = [35, 60, 90];
 export const GROWTH = 1.45;
+// A gentle extra scoring demand starts only after the opening four Depths.
+export const LATE_GROWTH = 1.05;
 export const DEPTHS = 8;
 export const MAX_RELICS = 5;
+export const HOARDER_CAP = 20;
 export const START_HP = 20;
 export const START_GOLD = 4;
-export const floorTarget = (depth: number, fi: number) => Math.round((BASE_TARGETS[fi] * Math.pow(GROWTH, depth - 1)) / 5) * 5;
+export const floorTarget = (depth: number, fi: number) => Math.round((BASE_TARGETS[fi] * Math.pow(GROWTH, depth - 1) * Math.pow(LATE_GROWTH, Math.max(0, depth - 4))) / 5) * 5;
 
 export interface RelicDef { name: string; desc: string; cost: number }
 export const RELICS: Record<RelicKey, RelicDef> = {
@@ -25,8 +29,8 @@ export const RELICS: Record<RelicKey, RelicDef> = {
   blood: { name: 'Blood Price', desc: 'Potions stop healing. Each one gives +2 Fury for the rest of the floor.', cost: 6 },
   packrat: { name: 'Pack Rat', desc: 'Rooms advance after you resolve 2 cards instead of 3.', cost: 7 },
   duelist: { name: 'Duelist', desc: '×2 Glory on a kill that leaves you at 5 HP or less.', cost: 6 },
-  exec: { name: 'Executioner', desc: 'A weapon kill that deals you 0 damage gains Valor equal to the weapon’s power.', cost: 6 },
-  hoarder: { name: 'Hoarder', desc: 'When a room is completed, gain Glory equal to your gold.', cost: 7 },
+  exec: { name: 'Executioner', desc: 'If your weapon alone prevents all damage, add its power to Valor.', cost: 6 },
+  hoarder: { name: 'Hoarder', desc: 'When a room is completed, gain Glory equal to your gold, up to 20.', cost: 7 },
   irongut: { name: 'Iron Gut', desc: '+6 max HP.', cost: 5 },
   scavenger: { name: 'Scavenger', desc: 'Replacing a weapon pays gold equal to its chain.', cost: 4 },
   glass: { name: 'Glass Blade', desc: '+3 Fury on weapon kills. −6 max HP.', cost: 6 },
@@ -65,6 +69,8 @@ export function bestiary(suit: Suit, v: number, risen = false): Lore {
     if (v === 13) return { name: 'Wyrm', caption: 'Skipped the wings. Went straight to spite.' };
     return { name: 'The Elder Beast', caption: 'The woods have eyes. These are them.' };
   }
+  if (suit === 'J') return { name: 'Joker', caption: 'A little luck. A small print problem.' };
+  if ((suit === 'D' || suit === 'H') && v >= 11 && v <= 13) return COURT[suit][v];
   if (suit === 'D') {
     if (v <= 4) return { name: 'Dagger', caption: 'Pointy end goes in the monster.' };
     if (v <= 7) return { name: 'Sword', caption: 'Classic. Reliable. Dulls like everything else.' };
@@ -77,9 +83,32 @@ export function bestiary(suit: Suit, v: number, risen = false): Lore {
 }
 
 export const FAMILY = { S: { name: 'Undead', trait: 'Rise: face cards come back once at half value.' }, C: { name: 'Beasts', trait: 'Pack: +1 strength per other face-up ♣ in the room.' } };
-export const SIGIL_DESC: Record<Suit, string> = {
+export const SIGIL_DESC: Record<StandardSuit, string> = {
   S: 'Undead give +3 Valor per level.',
   C: 'Beasts give +3 Valor per level.',
-  D: 'Weapons gain +1 power per level.',
-  H: 'Potions heal +2 more per level.',
+  D: 'Weapons and fighters gain +1 power per level.',
+  H: 'Potions and medics heal +2 more; wards gain +2 per level.',
 };
+
+
+export const COURT: Record<'D' | 'H', Record<number, Lore>> = {
+  D: {
+    11: { name: 'The Sellsword', caption: 'One fight. No references.' },
+    12: { name: 'The Duel Captain', caption: 'Will take this one. You owe her.' },
+    13: { name: 'The Oathkeeper', caption: 'A royal promise. One monster wide.' },
+  },
+  H: {
+    11: { name: 'The Field Medic', caption: 'Has seen worse. Charges later.' },
+    12: { name: 'The Wardkeeper', caption: 'Keeps the hurt outside.' },
+    13: { name: 'The War Chaplain', caption: 'Blesses the blade. Not the decisions.' },
+  },
+};
+
+export const JOKER_EFFECTS = [
+  { name: 'Found purse', desc: 'Gain 4 gold.', good: true },
+  { name: 'Second wind', desc: 'Heal up to 5 HP.', good: true },
+  { name: 'Inspiration', desc: '+1 Fury this floor.', good: true },
+  { name: 'Empty pockets', desc: 'Lose up to 3 gold.', good: false },
+  { name: 'Barbed joke', desc: 'Lose up to 3 HP, never your last HP.', good: false },
+  { name: 'Blunt punchline', desc: 'Lose your weapon chain; wear stays. Without a weapon, lose up to 2 gold.', good: false },
+] as const;

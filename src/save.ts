@@ -1,4 +1,4 @@
-import type { Game } from './game';
+import { Game, migrateGame } from './game';
 
 const SAVE = 'underdeck-save-v1';
 const STATS = 'underdeck-stats-v1';
@@ -21,7 +21,8 @@ function write(key: string, v: unknown) {
 
 export const loadGame = () => {
   const g = read<Game>(SAVE);
-  return g && g.version === 1 && (g.screen !== 'dead' && g.screen !== 'victory') ? g : null;
+  if (!g || g.version !== 1 || g.screen === 'dead' || g.screen === 'victory') return null;
+  try { return migrateGame(g); } catch { return null; } // A damaged legacy save should not prevent a new run.
 };
 export const saveGame = (G: Game) => write(SAVE, G);
 export const clearSave = () => { try { localStorage.removeItem(SAVE); } catch { /* ignore */ } };

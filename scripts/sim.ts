@@ -2,25 +2,32 @@
 // Usage: npm run sim -- [runs] [--starter]
 import { DEPTHS, FLOORS } from '../src/data';
 import {
-  Game, buyGood, buyRelic, canWeapon, chooseStarter, fleeState, flee, healAmount, isMon, killScore, leaveFloor, leaveShop, newGame, openShop, resolve, starterChoices,
+  Game, Mode, allyScore, canAlly, courtEffect, isCourt, isJoker, buyGood, buyRelic, canWeapon, chooseStarter, fleeState, flee, healAmount, isMon, killScore, leaveFloor, leaveShop, newGame, openShop, resolve, starterChoices,
 } from '../src/game';
 
 function step(G: Game) {
   const f = G.f;
   if (f.cleared) return leaveFloor(G);
-  let best: { id: number; mode?: 'weapon' | 'brawl'; score: number } | null = null;
+  let best: { id: number; mode?: Mode; score: number } | null = null;
   const consider = (o: NonNullable<typeof best>) => { if (!best || o.score > best.score) best = o; };
   for (const s of f.room) {
     const c = s.c;
     if (s.hidden) { consider({ id: c.id, score: -20 }); continue; }
+    if (isJoker(c)) { consider({ id: c.id, mode: 'discard', score: 0 }); continue; }
+    if (isCourt(c)) {
+      const e = courtEffect(G, c);
+      const score = e.kind === 'fighter' ? (e.n - (f.ally?.power ?? 0)) * 3 : e.kind === 'heal' ? Math.min(e.n, G.maxHp - G.hp) * 5 : e.kind === 'ward' ? e.n * 3 : 30;
+      consider({ id: c.id, score }); continue;
+    }
     if (isMon(c)) {
+      if (canAlly(G, c)) { const k = allyScore(G, c); consider({ id: c.id, mode: 'ally', score: k.glory + k.str - 8 }); }
       if (canWeapon(G, c)) { const k = killScore(G, c, true); if (k.dmg < G.hp) consider({ id: c.id, mode: 'weapon', score: k.glory - k.dmg * 4 + k.str }); }
       const k = killScore(G, c, false); if (k.dmg < G.hp) consider({ id: c.id, mode: 'brawl', score: k.glory - k.dmg * 8 });
     } else if (c.suit === 'D') {
       const w = f.weapon; consider({ id: c.id, score: !w ? 60 : (c.v - (w.last ?? w.card.v)) * 5 - w.chain * 4 });
     } else consider({ id: c.id, score: f.potionUsed ? 1 : Math.min(healAmount(G, c), G.maxHp - G.hp) * 5 });
   }
-  const b = best as { id: number; mode?: 'weapon' | 'brawl'; score: number } | null;
+  const b = best as { id: number; mode?: Mode; score: number } | null;
   if (fleeState(G)[0] && (!b || b.score < -30)) return flee(G);
   if (!b) return resolve(G, f.room[0].c.id, 'brawl');
   resolve(G, b.id, b.mode);

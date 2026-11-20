@@ -1,10 +1,10 @@
-import { artDefs, bossArt, monsterArt, potionArt, relicIcon, weaponArt } from './art';
+import { allyArt, artDefs, bossArt, jokerArt, monsterArt, potionArt, relicIcon, weaponArt } from './art';
 import { anim, center, countUp, fly, popup, pulse, shake, slash, wait } from './anim';
 import {
-  BOSSES, DEPTHS, FAMILY, FLOORS, MAX_RELICS, RELICS, RelicKey, SYM, bestiary, floorTarget, rankName,
+  BOSSES, DEPTHS, FAMILY, FLOORS, JOKER_EFFECTS, MAX_RELICS, RELICS, RelicKey, SYM, bestiary, floorTarget, rankName,
 } from './data';
 import {
-  Card, Ev, Game, Mode, PICKERS, buyGood, buyRelic, canWeapon, carry, flee, fleeState, has, healAmount, isMon,
+  Card, Ev, Game, Mode, PICKERS, allyScore, buyGood, buyRelic, canAlly, canWeapon, carry, courtEffect, flee, fleeState, has, healAmount, isCourt, isJoker, isMon, isPotion, isWeapon,
   killScore, leaveFloor, leaveShop, needsPick, newGame, nextFloor, openShop, packBonus, pickGood, remaining,
   starterChoices, chooseStarter,
   reroll, resolve, roomSize, sellRelic, strength, weaponPower,
@@ -32,18 +32,29 @@ const esc = (s: string) => s.replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt
 
 /* ---------------- art + cards ---------------- */
 function artFor(c: Card) {
+  if (isJoker(c)) return jokerArt();
+  if (isCourt(c)) return allyArt(c.suit as 'D' | 'H', c.v);
   if (c.suit === 'S' || c.suit === 'C') return monsterArt(c.suit, c.v);
   return c.suit === 'D' ? weaponArt(c.v) : potionArt(c.v);
 }
 
 function tipFor(c: Card): string {
   if (!G) return '';
-  if (c.suit === 'D') return `Power ${c.v + G.sigils.D}`;
-  if (c.suit === 'H') {
+  if (isJoker(c)) return 'Bargain or dismiss';
+  if (isCourt(c)) {
+    const effect = courtEffect(G, c);
+    if (effect.kind === 'fighter') return `Ally · power ${effect.n}`;
+    if (effect.kind === 'heal') return `Heal ${Math.min(effect.n, G.maxHp - G.hp)} HP`;
+    if (effect.kind === 'ward') return `+${effect.n} ward`;
+    return `+${effect.n} Fury`;
+  }
+  if (isWeapon(c)) return `Power ${c.v + G.sigils.D}`;
+  if (isPotion(c)) {
     if (has(G, 'blood')) return '+2 Fury';
     return G.f.potionUsed ? 'Sell · 2g' : `Heal ${healAmount(G, c)}`;
   }
   if (canWeapon(G, c)) { const s = killScore(G, c, true); return `<span class="dmg">−${s.dmg}</span> · <span class="gl">+${s.glory}</span>`; }
+  if (canAlly(G, c)) { const s = allyScore(G, c); return `Ally · <span class="gl">+${s.glory}</span>`; }
   const s = killScore(G, c, false); return `<span class="dmg">−${s.dmg}</span> · <span class="gl">+${s.glory}</span> bare`;
 }
 
@@ -54,24 +65,26 @@ function cardHTML(c: Card, o: CardOpts = {}) {
   const shown = o.inRoom && G ? (isMon(c) ? strength(G, c) : c.v) : c.v;
   const pack = o.inRoom && G && c.suit === 'C' ? packBonus(G, c) : 0;
   const badges = [
+    isCourt(c) ? '<span class="badge ally">Ally</span>' : '',
+    isJoker(c) ? '<span class="badge wild">Wild</span>' : '',
     c.risen ? '<span class="badge risen">Risen</span>' : '',
     pack ? `<span class="badge pack"><span class="w">Pack </span>+${pack}</span>` : '',
     c.gild ? '<span class="badge gild">Gilded</span>' : '',
     c.serr ? '<span class="badge serr">Serrated</span>' : '',
   ].join('');
-  const cls = ['card', `s-${c.suit}`, c.gild ? 'gilded' : '', c.risen ? 'is-risen' : '', o.mini ? 'mini' : '', o.selected ? 'sel' : '', o.dim ? 'dim' : ''].join(' ');
-  const suits = { S: 'spades', C: 'clubs', D: 'diamonds', H: 'hearts' };
-  const traits = [c.risen ? 'Risen: cannot rise again' : '', pack ? `Pack bonus ${pack}` : '', c.gild ? 'Gilded: grants 3 gold when resolved' : '', c.serr ? 'Serrated: starts with a chain of 1' : ''].filter(Boolean);
-  const label = `${rankName(c.v)} of ${suits[c.suit]}, ${lore.name}${shown !== c.v ? `, strength ${shown}` : ''}${traits.length ? `, ${traits.join(', ')}` : ''}`;
+  const cls = ['card', `s-${c.suit}`, c.gild ? 'gilded' : '', c.risen ? 'is-risen' : '', isCourt(c) ? 'is-court' : '', isJoker(c) ? 'is-joker' : '', o.mini ? 'mini' : '', o.selected ? 'sel' : '', o.dim ? 'dim' : ''].join(' ');
+  const suits = { S: 'spades', C: 'clubs', D: 'diamonds', H: 'hearts', J: 'Joker' };
+  const traits = [isCourt(c) ? 'Court ally, not a weapon or potion' : '', isJoker(c) ? 'Optional bargain: six possible outcomes, or dismiss safely' : '', c.risen ? 'Risen: cannot rise again' : '', pack ? `Pack bonus ${pack}` : '', c.gild ? 'Gilded: grants 3 gold when resolved' : '', c.serr ? 'Serrated: starts with a chain of 1' : ''].filter(Boolean);
+  const label = `${isJoker(c) ? 'Joker' : `${rankName(c.v)} of ${suits[c.suit]}, ${lore.name}`}${shown !== c.v ? `, strength ${shown}` : ''}${traits.length ? `, ${traits.join(', ')}` : ''}`;
   return `<${tag} class="${cls}" data-id="${c.id}" ${o.button ?? ''} style="--d:${-((c.id * 0.73) % 3).toFixed(2)}s;--i:${o.i ?? 0}" aria-label="${esc(label)}" ${o.inRoom && o.button ? `aria-pressed="${!!o.selected}"` : ''}>
-    <span class="c-rank">${shown !== c.v ? `<s>${rankName(c.v)}</s>${shown}` : rankName(c.v)}<i>${SYM[c.suit]}</i></span>
+    <span class="c-rank ${isJoker(c) ? 'joker-rank' : ''}">${isJoker(c) ? 'Jkr' : shown !== c.v ? `<s>${rankName(c.v)}</s>${shown}` : rankName(c.v)}<i>${SYM[c.suit]}</i></span>
     <span class="c-art">${artFor(c)}</span>
     ${o.mini ? '' : `<span class="c-name">${lore.name}</span>`}
     ${o.inRoom ? `<span class="c-tip">${tipFor(c)}</span>` : ''}
     <span class="c-badges">${badges}</span>
   </${tag}>`;
 }
-const backHTML = (c: Card, i: number) => `<button class="card back" data-id="${c.id}" data-act="sel" data-arg="${c.id}" style="--i:${i}" aria-label="Face-down card. Picking it immediately resolves it blind: a monster uses your weapon if possible, otherwise bare hands.">
+const backHTML = (c: Card, i: number) => `<button class="card back" data-id="${c.id}" data-act="sel" data-arg="${c.id}" style="--i:${i}" aria-label="Face-down card. Picking it immediately resolves it blind. Monsters use a usable weapon, then a capable ally, then bare hands. A Joker is invoked automatically.">
   <span class="back-eye"></span><span class="c-name">Blind</span></button>`;
 
 /* ---------------- HUD ---------------- */
@@ -131,29 +144,53 @@ function statusBar() {
       <div><span class="label">Flees</span><b class="num">${f.fleesLeft}</b></div>
       <div><span class="label">Potion</span><b>${has(g, 'blood') ? 'Off' : f.potionUsed ? 'Used' : 'Ready'}</b></div>
     </div>
-  </section>`;
+  </section>${supportHTML()}`;
+}
+
+function supportHTML() {
+  const g = G!, f = g.f, ally = f.ally;
+  return `<section class="support-bar" aria-label="Allies and floor support"><div class="ally-slot" id="ally-slot">${ally ? `${cardHTML(ally.card, { mini: true })}<div><span class="label">Ready ally</span><b>${bestiary(ally.card.suit, ally.card.v).name}</b><span>Power ${ally.power} · one kill this floor</span></div>` : '<div class="card mini empty-slot" aria-hidden="true"><span>+</span></div><div><span class="label">Ready ally</span><span>None. Recruit a ♦ J, Q or K.</span></div>'}</div><div class="support-stat"><span class="label">Ward</span><b class="num" id="ward-num">${f.ward ?? 0}</b><small>Absorbs damage before HP</small></div><div class="support-stat"><span class="label">Floor Fury bonus</span><b class="num">+${f.bonusFury}</b><small>Added to every kill</small></div></section>`;
 }
 
 function actionsHTML() {
   const g = G!, f = g.f;
   const slot = f.room.find(s => s.c.id === sel);
   if (!slot) {
-    const n = remaining(g);
-    const more = f.draw.length + f.risenQueue.length;
+    const n = remaining(g), more = f.draw.length + f.risenQueue.length;
     return `<div class="detail-empty"><b>Pick a card.</b> ${n} more to resolve in this room${more ? `; the last ${carry(g) > 1 ? carry(g) + ' carry' : 'one carries'} over` : ''}.</div>`;
   }
   const c = slot.c, lore = bestiary(c.suit, c.v, c.risen);
-  let btns = '';
+  let btns = '', extra = '';
   if (isMon(c)) {
+    const weaponReady = canWeapon(g, c), allyReady = canAlly(g, c);
+    const preferAlly = allyReady && (!weaponReady || killScore(g, c, true).dmg >= g.hp);
     if (f.weapon) {
-      if (canWeapon(g, c)) {
+      if (weaponReady) {
         const s = killScore(g, c, true), fatal = s.dmg >= g.hp;
-        btns += `<button class="btn primary ${fatal ? 'fatal' : ''}" data-act="fight"><b>${fatal ? 'Fight (fatal)' : `Fight with ♦${weaponPower(g)}`}</b><small>Take ${s.dmg} · ${s.valor}×${s.fury} = ${s.glory} Glory${s.dbl ? ' (Duelist ×2)' : ''}</small></button>`;
+        btns += `<button class="btn ${preferAlly ? '' : 'primary'} ${fatal ? 'fatal' : ''}" data-act="fight"><b>${fatal ? 'Fight (fatal)' : `Fight with ♦${weaponPower(g)}`}</b><small>Take ${s.dmg}${s.blocked ? ` · ward blocks ${s.blocked}` : ''} · ${s.valor}×${s.fury} = ${s.glory} Glory${s.dbl ? ' (Duelist ×2)' : ''}</small></button>`;
       } else btns += `<button class="btn" disabled><b>Weapon too worn</b><small>Needs ${has(g, 'whetstone') ? 'at most' : 'less than'} ${f.weapon.last} strength; this is ${strength(g, c)}</small></button>`;
     }
-    const s = killScore(g, c, false), fatal = s.dmg >= g.hp, prim = !f.weapon || !canWeapon(g, c);
-    btns += `<button class="btn ${prim ? 'primary' : ''} ${fatal ? 'fatal' : ''}" data-act="brawl"><b>${fatal ? 'Brawl (fatal)' : 'Brawl'}</b><small>Take ${s.dmg} · ${s.valor}×${s.fury} = ${s.glory} · keeps chain</small></button>`;
-  } else if (c.suit === 'D') {
+    if (f.ally) {
+      if (allyReady) {
+        const s = allyScore(g, c);
+        btns += `<button class="btn ${preferAlly ? 'primary' : ''}" data-act="ally"><b>Send ${bestiary(f.ally.card.suit, f.ally.card.v).name}</b><small>Take 0 · ${s.valor}×${s.fury} = ${s.glory} Glory · uses your ally, keeps weapon chain</small></button>`;
+      } else btns += `<button class="btn" disabled><b>Ally outmatched</b><small>Power ${f.ally.power}; this monster has ${strength(g, c)} strength</small></button>`;
+    }
+    const s = killScore(g, c, false), fatal = s.dmg >= g.hp, prim = !weaponReady && !allyReady;
+    btns += `<button class="btn ${prim ? 'primary' : ''} ${fatal ? 'fatal' : ''}" data-act="brawl"><b>${fatal ? 'Brawl (fatal)' : 'Brawl'}</b><small>Take ${s.dmg}${s.blocked ? ` · ward blocks ${s.blocked}` : ''} · ${s.valor}×${s.fury} = ${s.glory} · keeps chain</small></button>`;
+  } else if (isCourt(c)) {
+    const effect = courtEffect(g, c);
+    if (effect.kind === 'fighter') {
+      btns += `<button class="btn primary" data-act="recruit"><b>Recruit ${lore.name}</b><small>Power ${effect.n}. Defeats one monster at or below that strength, then leaves.${f.ally ? ` Replaces ${bestiary(f.ally.card.suit, f.ally.card.v).name}.` : ' One ready ally at a time.'}</small></button>`;
+      extra = '<span class="trait">Ally kills deal no damage, use no ward, keep your weapon chain, and score without weapon-chain Fury. The ally leaves when you change floors.</span>';
+    } else {
+      const detail = effect.kind === 'heal' ? `Heal ${Math.min(effect.n, g.maxHp - g.hp)} HP. Independent of potions, Blood Price and The Leech.` : effect.kind === 'ward' ? `Add ${effect.n} ward. Absorbs incoming combat damage before HP; unused ward lasts this floor.` : `+${effect.n} Fury on every kill for the rest of this floor.`;
+      btns += `<button class="btn primary" data-act="support"><b>${effect.kind === 'heal' ? 'Accept healing' : effect.kind === 'ward' ? 'Accept ward' : 'Accept blessing'}</b><small>${detail}</small></button>`;
+    }
+  } else if (isJoker(c)) {
+    btns += '<button class="btn primary" data-act="invoke"><b>Take the bargain</b><small>One of six outcomes. Three helpful, three harmful. No outcome can kill you directly.</small></button><button class="btn" data-act="discard"><b>Dismiss safely</b><small>Resolve this card with no Joker effect.</small></button>';
+    extra = `<details class="joker-risk"><summary>Possible outcomes · one in six each</summary><ul>${JOKER_EFFECTS.map(e => `<li><b>${e.name}.</b> ${e.desc}</li>`).join('')}</ul><p>The result is fixed for this Joker, seed and floor. Replaying does not reroll it. Ward does not absorb a Joker’s HP loss.</p></details>`;
+  } else if (isWeapon(c)) {
     btns += `<button class="btn primary" data-act="equip"><b>Equip ♦${c.v + g.sigils.D}</b><small>${f.weapon ? `Drops ♦${f.weapon.card.v}, resets chain ×${1 + f.weapon.chain}` : 'Your first weapon this floor'}${c.serr ? ' · starts ×2' : ''}</small></button>`;
   } else {
     const sub = has(g, 'blood') ? 'Blood Price: +2 Fury this floor' : f.potionUsed ? 'Already healed this room: sell for 2 gold' : `Heal ${Math.min(healAmount(g, c), g.maxHp - g.hp)} HP`;
@@ -161,7 +198,7 @@ function actionsHTML() {
   }
   const trait = isMon(c) ? `<span class="trait">${FAMILY[c.suit as 'S' | 'C'].name}: ${c.risen ? 'Already risen: this kill is final.' : FAMILY[c.suit as 'S' | 'C'].trait}</span>` : '';
   return `<div class="lore"><b>${lore.name}</b> <span class="cap">${lore.caption}</span>${trait}</div>
-    <div class="btns">${btns}<button class="btn ghosty" data-act="desel" aria-label="Cancel"><b>✕</b></button></div>`;
+    <div class="btns">${btns}<button class="btn ghosty" data-act="desel" aria-label="Cancel"><b>✕</b></button></div>${extra}`;
 }
 
 function relicList(sell: boolean) {
@@ -177,13 +214,16 @@ function rulesHTML(open = false) {
   const brawlRule = g && has(g, 'bloodletter') ? 'Bloodletter adds your weapon’s chain to brawl Fury.' : 'Brawling does not add weapon chain to Fury.';
   const potionRule = g && has(g, 'blood') ? 'Blood Price replaces healing and potion sales: every potion adds +2 Fury for this floor.' : 'Only the first potion per room heals; extras sell for 2 gold.';
   return `<details class="rules" ${open ? 'open' : ''}><summary>How to play</summary><ul>
-    <li>♠♣ are monsters, ♦ weapons, ♥ potions. Each room deals ${roomSize(G)} cards; resolve all but ${carry(G)}, the rest carries into the next room.</li>
+    <li>The dungeon starts with 52 cards: ♠♣ 2–A monsters, ♦ 2–10 weapons, ♥ 2–10 potions, six red court allies and two Jokers. There are no red aces. Each room deals ${roomSize(G)} cards; resolve all but ${carry(G)}, the rest carries into the next room.</li>
     <li>Fighting with a weapon: take (monster − weapon) damage. After a kill, the weapon only hits monsters <i>${weaponRule}</i> its last kill’s strength.</li>
     <li><b>Glory = Valor × Fury.</b> Valor is monster strength plus suit sigils and relic bonuses. Fury starts at 1; weapon chains and some relics add more. Long descending chains score big.</li>
     <li>Brawling takes full damage and keeps your chain. ${brawlRule} Other Fury bonuses still apply.</li>
     <li><b>Undead ♠</b> J–A rise once at half strength, rounded down, in the next room. <b>Beasts ♣</b> get +1 strength per other <i>face-up</i> ♣ still in the room. Pack changes as cards leave; effective strength sets your weapon’s last kill.</li>
     <li>${potionRule} Flee an untouched room, never twice in a row; charges are limited each floor. The Warden blocks fleeing even with Coward’s Cloak.</li>
     <li>Survive to reach the Glory target, then leave or press on for +1 gold per completed room. Dying after the target still ends your run. An empty dungeon after the target leaves automatically. HP heals by half between floors and fully after each Lair.</li>
+    <li>♦ J/Q/K recruit one-use allies with power 8/10/12 plus ♦ sigils. One ready ally at a time. Send one against a monster at or below its power for no damage; it keeps your weapon chain and scores without weapon-chain Fury.</li>
+    <li>♥ J heals 6 plus ♥ sigils, independently of potions, Blood Price and The Leech. ♥ Q adds 5 ward plus ♥ sigils, absorbing combat damage before HP. ♥ K adds +1 Fury for this floor. Allies, ward and bonus Fury expire when you change floors.</li>
+    <li>Jokers offer a six-way bargain: gold, healing or Fury; gold loss, nonlethal HP loss or lost weapon chain. Dismiss one safely instead. Picking a face-down Joker invokes it automatically. Both choices resolve the card.</li>
     <li>The same seed, starter relic and choices reproduce a run. A shared link starts at the beginning; it does not copy your current progress. Daily dungeons use the UTC date.</li>
     <li>Keys: 1–5 pick, Enter acts from the page, B brawl, F flee, L leave, Esc cancel. Focused buttons keep their normal keyboard behavior.</li>
   </ul></details>`;
@@ -250,7 +290,7 @@ function titleHTML() {
     <div class="fan">${fan.map((a, i) => `<div class="card fan-card" style="--k:${i - 2}"><span class="c-art">${a}</span></div>`).join('')}</div>
     <h1 class="logo"><span class="rubric">U</span>nderdeck</h1>
     <p class="tagline">A Scoundrel roguelike, played on the map.</p>
-    <p>Choose a free starting relic, then crawl eight depths and 24 floors of a dungeon built from a deck of cards. Kill monsters in falling order to build weapon chains: Glory is Valor × Fury, and Fury grows with every kill your weapon makes.</p>
+    <p>Choose a free starting relic, then crawl eight depths and 24 floors of a 52-card dungeon. Recruit court allies and weigh a Joker’s bargain. Kill monsters in falling order to build weapon chains: Glory is Valor × Fury, and Fury grows with every kill your weapon makes.</p>
     <div class="menu">
       ${sharedSeed ? `<button class="btn primary" data-act="seedrun" data-arg="${sharedSeed}"><b>Play shared seed ${sharedSeed}</b><small>Someone sent you this dungeon</small></button>` : ''}
       ${save ? `<button class="btn ${sharedSeed ? '' : 'primary'}" data-act="continue"><b>Continue</b><small>${save.screen === 'starter' ? 'Choosing a relic' : `Depth ${save.depth} ${FLOORS[save.fi]}`} · seed ${esc(save.seed)}</small></button>` : ''}
@@ -321,7 +361,7 @@ function endHTML(win: boolean) {
 
 function modalHTML() {
   if (!G) return '';
-  const sorted = [...G.deck].sort((a, b) => 'SCDH'.indexOf(a.suit) - 'SCDH'.indexOf(b.suit) || b.v - a.v);
+  const sorted = [...G.deck].sort((a, b) => 'SCDHJ'.indexOf(a.suit) - 'SCDHJ'.indexOf(b.suit) || b.v - a.v);
   if (picker != null && G.screen === 'shop') {
     const gd = G.shop?.goods[picker];
     if (!gd || !needsPick(gd)) return '';
@@ -332,7 +372,7 @@ function modalHTML() {
   }
   if (modal === 'deck') {
     return `<div class="modal" role="dialog" aria-modal="true" tabindex="-1" aria-label="Your deck"><div class="box"><h2>Your deck · ${G.deck.length} cards</h2>
-      <p class="muted">${(['S', 'C', 'D', 'H'] as const).map(k => `${SYM[k]} ${G!.deck.filter(c => c.suit === k).length}`).join(' · ')}</p>
+      <p class="muted">${(['S', 'C', 'D', 'H', 'J'] as const).map(k => `${k === 'J' ? 'Jokers' : SYM[k]} ${G!.deck.filter(c => c.suit === k).length}`).join(' · ')}</p>
       <div class="grid">${sorted.map(c => cardHTML(c, { mini: true })).join('')}</div>
       <button class="btn" data-act="closemodal"><b>Close</b></button></div></div>`;
   }
@@ -480,6 +520,7 @@ async function doResolve(id: number, mode?: Mode) {
 async function preAnimate(ev: Ev[], cardEl: HTMLElement | null) {
   if (!cardEl) return;
   const wslot = q('#wslot .card');
+  if (!ev.length) { await anim(cardEl, [{ opacity: 1 }, { transform: 'translateY(24px)', opacity: 0 }], { duration: 240, fill: 'forwards' }); return; }
   for (const e of ev) {
     if (e.t === 'kill') {
       if (e.weapon && wslot) {
@@ -494,7 +535,11 @@ async function preAnimate(ev: Ev[], cardEl: HTMLElement | null) {
         await wait(230);
         void slash(cardEl, 'blade');
       } else {
-        void slash(cardEl, 'fist');
+        if (e.ally) {
+          const allyEl = q('#ally-slot .card');
+          if (allyEl) void pulse(allyEl, 1.2);
+          void slash(cardEl, 'blade');
+        } else void slash(cardEl, 'fist');
       }
       cardEl.classList.add('hit');
       await anim(cardEl, [
@@ -507,7 +552,10 @@ async function preAnimate(ev: Ev[], cardEl: HTMLElement | null) {
     } else if (e.t === 'equip') {
       const slotEl = q('#wslot .card');
       if (slotEl) await fly(cardEl, slotEl, 440);
-    } else if (e.t === 'heal' || e.t === 'fury') {
+    } else if (e.t === 'ally') {
+      const allyEl = q('#ally-slot .card');
+      if (allyEl) await fly(cardEl, allyEl, 420);
+    } else if (e.t === 'heal' || e.t === 'fury' || e.t === 'ward') {
       const hp = q('#hp');
       await anim(cardEl, [
         { transform: 'none', opacity: 1, filter: 'none' },
@@ -515,7 +563,9 @@ async function preAnimate(ev: Ev[], cardEl: HTMLElement | null) {
         { transform: 'translateY(-60px) scale(.6)', opacity: 0 },
       ], { duration: 520, easing: 'ease-in', fill: 'forwards' });
       void pulse(hp, 1.04);
-    } else if (e.t === 'gold' && !ev.some(x => x.t === 'kill' || x.t === 'heal' || x.t === 'fury' || x.t === 'equip')) {
+    } else if (e.t === 'wild') {
+      await anim(cardEl, [{ transform: 'rotate(-5deg)', opacity: 1 }, { transform: 'rotate(6deg) translateY(-16px)', opacity: .8 }, { transform: 'translateY(-38px) scale(.8)', opacity: 0 }], { duration: 520, easing: 'ease-in', fill: 'forwards' });
+    } else if (e.t === 'gold' && !ev.some(x => x.t === 'kill' || x.t === 'heal' || x.t === 'fury' || x.t === 'equip' || x.t === 'ally' || x.t === 'ward' || x.t === 'wild')) {
       await anim(cardEl, [{ transform: 'none', opacity: 1 }, { transform: 'translateY(-30px) scale(.7)', opacity: 0 }], { duration: 380, fill: 'forwards' });
     }
   }
@@ -532,6 +582,10 @@ function postAnimate(ev: Ev[], rect: DOMRect | undefined, before: { glory: numbe
       if (e.dmg >= 6) void shake($app, Math.min(14, e.dmg));
       delay += 160;
     }
+    if (e.t === 'ally') popup(`Ally ready · ${e.power}`, 'glory', at.x, at.y, delay);
+    if (e.t === 'ward') popup(`+${e.n} ward`, 'glory', at.x, at.y, delay);
+    if (e.t === 'wild') { popup(e.name, e.good ? 'glory' : 'hurt', innerWidth / 2, at.y, delay); popup(e.text, 'info', innerWidth / 2, at.y + 42, delay + 180); }
+    if (e.t === 'kill' && e.ally) popup('Ally spent', 'info', at.x, at.y + 50, delay + 240);
     if (e.t === 'heal') popup(`+${e.n} HP`, 'heal', at.x, at.y, delay);
     if (e.t === 'fury') popup(`+${e.n} Fury`, 'glory', at.x, at.y, delay);
     if (e.t === 'gold') popup(`+${e.n} gold`, 'gold', at.x, at.y + 30, delay + 200);
@@ -618,6 +672,9 @@ function act(a: string, arg?: string) {
     }
     case 'desel': sel = null; break;
     case 'fight': if (sel != null) void doResolve(sel, 'weapon'); return;
+    case 'ally': if (sel != null) void doResolve(sel, 'ally'); return;
+    case 'discard': if (sel != null) void doResolve(sel, 'discard'); return;
+    case 'recruit': case 'support': case 'invoke': if (sel != null) void doResolve(sel); return;
     case 'brawl': if (sel != null) void doResolve(sel, 'brawl'); return;
     case 'equip': case 'drink': if (sel != null) void doResolve(sel); return;
     case 'flee': void doFlee(); return;

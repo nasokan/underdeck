@@ -11,7 +11,7 @@ export function actionAllowed(screen: Screen | 'title', overlay: Overlay, action
   const allowed: Record<Screen | 'title', readonly string[]> = {
     title: ['continue', 'newrun', 'daily', 'seedrun'],
     starter: ['starter', 'deck', 'share', 'quit'],
-    play: ['sel', 'desel', 'fight', 'brawl', 'equip', 'drink', 'flee', 'leave', 'deck', 'share', 'quit'],
+    play: ['sel', 'desel', 'fight', 'brawl', 'ally', 'recruit', 'support', 'invoke', 'discard', 'equip', 'drink', 'flee', 'leave', 'deck', 'share', 'quit'],
     cleared: ['shop'],
     shop: ['buyr', 'buyg', 'sell', 'reroll', 'leaveshop', 'deck'],
     dead: ['newrun', 'seedrun', 'share'],

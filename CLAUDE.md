@@ -12,6 +12,7 @@ For a review task, see [docs/REVIEW.md](docs/REVIEW.md).
 npm install
 npm run dev     # http://localhost:5173
 npm test        # vitest rules, UI dispatch, modal policy and save tests
+npm run playtest -- 100 --out /tmp/underdeck-playtest # visible-room planning and legal starter cohorts
 npm run sim     # greedy bot plays 3000 seeded runs; prints clear rates per Depth
 npm run build   # tsc --noEmit + vite build into dist/
 ```
@@ -48,7 +49,15 @@ Pushing to `main` runs tests, builds and deploys to GitHub Pages (`.github/workf
 
 ## November 2026 upgrade
 - New UI runs call `newGame(seed, daily, true)` and enter `starter`; existing callers default to immediate play. `starterChoices` uses an isolated stream, and `chooseStarter` applies exactly one free relic.
-- Preserve 8 depths/24 floors, one difficulty, original targets and base HP. No tutorial, sound or visual redesign.
+- Preserve 8 depths/24 floors, one difficulty and base HP; tune targets only with paired evidence. No tutorial, sound or visual redesign.
 - Keep modal actions guarded by `ui-policy.ts`, background content inert, and focus inside dialogs. Persist rules mutations before visual waits; release busy locks in finally.
 - Mobile bar clearance comes from ResizeObserver; do not restore a fixed padding guess.
 - Findings, design decisions and research: [docs/UPGRADE.md](docs/UPGRADE.md).
+
+## Court and Joker rules
+- `isCourt`/`isJoker` must branch before weapon/potion handling. Honing applies only to `isWeapon`.
+- Fighters are one-use floor resources (`f.ally`), heart supports heal/grant ward/add Fury, `killScore.dmg` is HP damage after ward with `blocked` explicit. `allyScore` excludes weapon-chain and Executioner bonuses.
+- `migrateGame` upgrades legacy decks once (`rulesVersion: 2`) without altering their current room/draw. `f.ally` and `f.ward` stay optional for v1 compatibility.
+- Joker RNG uses isolated seed/floor/card streams. Never let planning inspect its seeded outcome; tests enforce hidden/future/outcome privacy.
+- Hoarder caps at `HOARDER_CAP` (20) per completed room. Late targets use LATE_GROWTH=1.05 after Depth 4; starter stats are unchanged. Further tuning needs paired evidence.
+- `scripts/playtest-policy.ts` is a deterministic visible-room planner, not a human difficulty forecast. `scripts/playtest.ts` reports legal starter samples, matched comparisons and public-only traces. See docs/PLAYTEST.md.

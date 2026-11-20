@@ -1,6 +1,6 @@
 // Dev page: every drawing at three sizes, on a bone card and on the dark page.
 import './art.css';
-import { artDefs, monsterArt, weaponArt, potionArt, bossArt, relicIcon, type BossKey, type RelicKey } from './art';
+import { artDefs, allyArt, jokerArt, monsterArt, weaponArt, potionArt, bossArt, relicIcon, type BossKey, type RelicKey } from './art';
 
 document.body.insertAdjacentHTML('afterbegin', artDefs());
 const app = document.getElementById('app')!;
@@ -22,6 +22,7 @@ const gridSize = Number(new URLSearchParams(location.search).get('grid')) || 0;
 if (gridSize) {
   const all = [
     ...RANKS.map((v) => monsterArt('S', v)), ...RANKS.map((v) => monsterArt('C', v)),
+    ...(['D', 'H'] as const).flatMap(s => [11, 12, 13].map(v => allyArt(s, v))), jokerArt(),
     ...[2, 5, 8, 10].map(weaponArt), ...[2, 5, 8].map(potionArt), ...BOSSES.map(bossArt),
   ];
   const q = new URLSearchParams(location.search);
@@ -44,6 +45,9 @@ html += '<h2>Weapons (diamonds)</h2>';
 [[2, 'Dagger (2-4)'], [5, 'Sword (5-7)'], [8, 'Battle axe (8-9)'], [10, 'Greatsword (10)']].forEach(([v, l]) => (html += row(l as string, weaponArt(v as number))));
 html += '<h2>Potions (hearts)</h2>';
 [[2, 'Vial (2-4)'], [5, 'Flask (5-7)'], [8, 'Cauldron (8-10)']].forEach(([v, l]) => (html += row(l as string, potionArt(v as number))));
+html += '<h2>Court allies and Jokers</h2>';
+(['D', 'H'] as const).forEach(s => [11, 12, 13].forEach(v => (html += row(`${s} ${v}`, allyArt(s, v)))));
+html += row('Joker', jokerArt());
 html += '<h2>Bosses</h2>';
 BOSSES.forEach((k) => (html += row(k, bossArt(k))));
 html += '<h2>Relics</h2>';
